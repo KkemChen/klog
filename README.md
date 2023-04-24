@@ -32,6 +32,10 @@
   		loginfo("TEST%d",ret);   ///print输入
   		LOG_INFO("test {}", 1);  ///fmt输入
   
+      /*code...
+        ...
+            */
+  
   	logger::get().shutdown();
   
   	getchar();
