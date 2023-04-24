@@ -35,48 +35,6 @@ namespace klog
 constexpr const char* log_path_ = "logs/test.log";  //日志存储路径
 class custom_level_formatter_flag;
 
-class my_color_formatter : public spdlog::formatter {
-public:
-    std::string format(const spdlog::details::log_msg& msg){
-        // 根据日志级别选择颜色
-        const char* color_code = "";
-        switch (msg.level) {
-            case spdlog::level::trace:
-                color_code = "\033[1;37m";  // 白色
-                break;
-            case spdlog::level::debug:
-                color_code = "\033[1;36m";  // 青色
-                break;
-            case spdlog::level::info:
-                color_code = "\033[1;32m";  // 绿色
-                break;
-            case spdlog::level::warn:
-                color_code = "\033[1;33m";  // 黄色
-                break;
-            case spdlog::level::err:
-                color_code = "\033[1;31m";  // 红色
-                break;
-            case spdlog::level::critical:
-                color_code = "\033[1;35m";  // 紫色
-                break;
-            case spdlog::level::off:
-                break;
-        }
-
-        // 构造带有颜色的日志消息字符串
-        std::ostringstream oss;
-        if (color_code[0] != '\0') {
-            // 如果颜色代码不为空，则添加颜色代码和重置代码
-            oss << color_code << "["  << "] " << msg.payload.data() << "\033[0m";
-        } else {
-            // 否则，只添加日志级别和消息文本
-            oss << "[" << "] " << msg.payload.data();
-        }
-
-        return oss.str();
-    }
-};
-
 /**
  * \brief 自定义sink
  *		  1.按文件大小分片存储
