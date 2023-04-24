@@ -1,2 +1,45 @@
 # klog
 基于spdlog封装，支持fmt\printf\流式输入
+
+
+
+### xmake构建
+
+* `xmake -v `
+
+### 使用说明
+
+* 直接包含`klog.hpp`
+
+* 示例：
+
+  ```cpp
+  #include "klog.hpp"
+  
+  
+  using namespace std;
+  
+  int main(int argc, char *argv[])
+  {
+  	using namespace klog;
+  	if (!logger::get().init("logs/test/test.log")) {
+  		return 1;
+  	}
+  		logger::get().set_level(spdlog::level::trace);
+  		int ret = 0;
+      
+  		LOGINFO() << "test" << 6666;  ///流式输入
+  		loginfo("TEST%d",ret);   ///print输入
+  		LOG_INFO("test {}", 1);  ///fmt输入
+  
+  	logger::get().shutdown();
+  
+  	getchar();
+  	return 0;
+  }
+  ```
+
+  输出：
+
+  
+
