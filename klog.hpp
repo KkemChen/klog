@@ -33,9 +33,11 @@
 /// spdlog wrap class
 namespace klog
 {
-constexpr const char* log_path_ = "logs/test.log";  //默认日志存储路径
-class custom_level_formatter_flag;
+constexpr const char* LOG_PATH_ = "logs/test.log";						//默认日志存储路径
+constexpr const std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;	//单个日志文件最大大小(20M)
+constexpr const std::size_t MAX_STORAGE_DAYS = 1;						//日志保存时间(天)
 
+class custom_level_formatter_flag;
 
 /**
  * \brief 自定义sink
@@ -76,9 +78,8 @@ private:
 	///清理过期日志文件 
 	void cleanup_file_();
 
-	//spdlog::filename_t base_filename_;
 	std::size_t m_max_size;
-	std::size_t max_storage_days;
+	std::size_t m_max_storage_days;
 	std::size_t m_current_size;
 	spdlog::details::file_helper m_file_helper;
 	std::experimental::filesystem::path m_log_basename;
@@ -89,8 +90,6 @@ private:
 
 class logger final
 {
-	friend class custom_rotating_file_sink;
-
 public:
 	/// let logger like stream
 	struct log_stream : public std::ostringstream
@@ -113,9 +112,6 @@ public:
 		static logger logger;
 		return logger;
 	}
-
-	///初始化日志
-	bool init(const std::string& log_path = log_path_);
 
 	///停止所有日志记录操作并清理内部资源
 	void shutdown() { spdlog::shutdown(); }
@@ -170,7 +166,12 @@ public:
 	void set_flush_on(spdlog::level::level_enum lvl) { spdlog::flush_on(lvl); }
 
 private:
-	logger() = default;
+	///初始化日志
+	bool init(const std::string& log_path = LOG_PATH_);
+
+private:
+	logger() { init(); }
+
 	~logger() = default;
 	logger(const logger&) = delete;
 	void operator=(const logger&) = delete;
@@ -203,7 +204,8 @@ inline bool logger::init(const std::string& log_path)
 		// constexpr std::size_t max_file_size = 50 * 1024 * 1024; // 50mb
 		//auto rotatingSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, 20 * 1024, 10);
 
-		auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, 20 * 1024 * 1024, 1);
+		auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, SINGLE_FILE_MAX_SIZE,
+		                                                                      MAX_STORAGE_DAYS);
 		sinks.push_back(rotatingSink);
 
 		//auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(log_path.string(), 23, 59); //日志滚动更新时间：每天23:59更新
@@ -258,7 +260,7 @@ inline custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t l
                                                             const spdlog::file_event_handlers& event_handlers)
 	: m_log_path(log_path)
 	, m_max_size(max_size)
-	, max_storage_days(max_storage_days)
+	, m_max_storage_days(max_storage_days)
 	, m_file_helper{event_handlers}
 {
 	if (max_size == 0) {
@@ -365,9 +367,9 @@ inline void custom_rotating_file_sink::cleanup_file_()
 
 				const double days = duration.count() / (24 * 60 * 60); // 将时间差转换为天数
 
-				if (days > max_storage_days) {
+				if (days > m_max_storage_days) {
 					fs::remove_all(p);
-					std::cout << "Clean up log files older than" << max_storage_days << " days" << std::endl;
+					std::cout << "Clean up log files older than" << m_max_storage_days << " days" << std::endl;
 				}
 			}
 		}
