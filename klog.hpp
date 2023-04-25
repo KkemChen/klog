@@ -27,26 +27,28 @@
 #include <spdlog/sinks/msvc_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/common.h>
 
 
 /// spdlog wrap class
 namespace klog
 {
-constexpr const char* log_path_ = "logs/test.log";  //日志存储路径
+constexpr const char* log_path_ = "logs/test.log";  //默认日志存储路径
 class custom_level_formatter_flag;
+
 
 /**
  * \brief 自定义sink
- *		  1.按文件大小分片存储
- *		  2.文件命名：basename+datetime+.log
- *		  3.每次rotate时自动检查当前目录日志文件是否超过设定的时间，并自动清理
+ *	1.按文件大小分片存储
+ *	2.文件命名：basename+datetime+.log
+ *	3.每次rotate时自动检查当前目录日志文件是否超过设定的时间，并自动清理
  */
 class custom_rotating_file_sink final : public spdlog::sinks::base_sink<std::mutex>
 {
 public:
 	/**
 	 * \brief 
-	 * \param base_filename 基础日志文件路径
+	 * \param log_path 日志存储路径
 	 * \param max_size 单文件最大容量
 	 * \param max_storage_days 最大保存天数
 	 * \param rotate_on_open 默认true
@@ -57,36 +59,21 @@ public:
 	                          std::size_t max_storage_days,
 	                          bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
 
-	/**
-	 * \brief 
-	 * \param filename 拼接文件名
-	 * \param index 时间戳
-	 * \return 
-	 */
 	spdlog::filename_t calc_filename();
 	spdlog::filename_t filename();
 
 protected:
-	/**
-	 * \brief 将日志消息写入到输出目标
-	 * \param msg 日志消息
-	 */
+	///将日志消息写入到输出目标 
 	void sink_it_(const spdlog::details::log_msg& msg) override;
 
-	/**
-	 * \brief 刷新日志缓冲区
-	 */
+	///刷新日志缓冲区 
 	void flush_() override;
 
 private:
-	/**
-	 * \brief 日志轮转
-	 */
+	///日志轮转 
 	void rotate_();
 
-	/**
-	 * \brief 清理过期日志文件
-	 */
+	///清理过期日志文件 
 	void cleanup_file_();
 
 	//spdlog::filename_t base_filename_;
@@ -109,8 +96,7 @@ public:
 	struct log_stream : public std::ostringstream
 	{
 	public:
-		log_stream(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl): loc(_loc)
-		  , lvl(_lvl) { }
+		log_stream(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl): loc(_loc), lvl(_lvl) { }
 
 		~log_stream() { flush(); }
 
@@ -128,43 +114,71 @@ public:
 		return logger;
 	}
 
-	//初始化日志
+	///初始化日志
 	bool init(const std::string& log_path = log_path_);
 
+	///停止所有日志记录操作并清理内部资源
 	void shutdown() { spdlog::shutdown(); }
 
+	///spdlog输出
 	template <typename... Args>
 	void log(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, const Args&... args)
 	{
 		spdlog::log(loc, lvl, fmt, args...);
 	}
 
+	///传统printf输出
+	void printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, ...)
+	{
+		auto fun = [](void* self, const char* fmt, va_list al) {
+			auto thiz = static_cast<logger*>(self);
+			char* buf = nullptr;
+			int len = vasprintf(&buf, fmt, al);
+			if (len != -1) {
+				thiz->m_ss << std::string(buf, len);
+				free(buf);
+			}
+		};
+
+		va_list al;
+		va_start(al, fmt);
+		fun(this, fmt, al);
+		va_end(al);
+		log(loc, lvl, m_ss.str().c_str());
+		m_ss.clear();
+		m_ss.str("");
+	}
+
+
+	///fmt的printf输出（不支持格式化非void类型指针）
 	template <typename... Args>
-	void printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, const Args&... args)
+	void fmt_printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, const Args&... args)
 	{
 		spdlog::log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 	}
 
 	spdlog::level::level_enum level() { return log_level; }
 
+	///设置输出级别
 	void set_level(spdlog::level::level_enum lvl)
 	{
 		log_level = lvl;
 		spdlog::set_level(lvl);
 	}
 
+	///设置刷新达到指定级别时自动刷新缓冲区
 	void set_flush_on(spdlog::level::level_enum lvl) { spdlog::flush_on(lvl); }
 
 private:
 	logger() = default;
 	~logger() = default;
-
 	logger(const logger&) = delete;
 	void operator=(const logger&) = delete;
 
 private:
 	std::atomic_bool is_inited = {false};
 	spdlog::level::level_enum log_level = spdlog::level::trace;
+	std::stringstream m_ss;
 };
 
 inline bool logger::init(const std::string& log_path)
@@ -213,7 +227,7 @@ inline bool logger::init(const std::string& log_path)
 
 		formatter->add_flag<custom_level_formatter_flag>('*').
 		           set_pattern("%Y-%m-%d %H:%M:%S  %^[%*]%$  |%t|  [%s:%# (%!)]: %v");
-		
+
 		spdlog::set_formatter(std::move(formatter));
 
 		spdlog::flush_every(std::chrono::seconds(5));
@@ -341,8 +355,6 @@ inline void custom_rotating_file_sink::cleanup_file_()
 
 				const double days = duration.count() / (24 * 60 * 60); // 将时间差转换为天数
 
-				int ret = 0;
-
 				if (days > max_storage_days) {
 					fs::remove_all(p);
 					std::cout << "Clean up log files older than" << max_storage_days << " days" << std::endl;
@@ -382,10 +394,6 @@ public:
 		return spdlog::details::make_unique<custom_level_formatter_flag>();
 	}
 };
-
-
-
-
 } // namespace klog
 
 
