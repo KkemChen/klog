@@ -18,7 +18,7 @@
   
   int main()
   {
-		int ret = 1;
+		int ret = 22;
 		
 		LOGTRACE() << "test" << 6666;  ///流式输入
 		logtrace("TEST:%p,%d,%x",&ret,ret+2,&ret+1);  ///print输入
