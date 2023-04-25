@@ -23,11 +23,12 @@
 #endif
 
 
-
 /// spdlog wrap class
 namespace klog
 {
-constexpr const char* log_path_ = "logs/test.log";  //默认日志存储路径
+constexpr const char* LOG_PATH_ = "logs/test.log";						//默认日志存储路径
+constexpr const std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;	//单个日志文件最大大小(20M)
+constexpr const std::size_t MAX_STORAGE_DAYS = 1;						//日志保存时间(天)
 
 ///自定义level flag
 class custom_level_formatter_flag : public spdlog::custom_flag_formatter
@@ -37,7 +38,6 @@ public:
 
 	std::unique_ptr<custom_flag_formatter> clone() const override;
 };
-
 
 
 /**
@@ -113,9 +113,6 @@ public:
 public:
 	static logger& get();
 
-	///初始化日志
-	bool init(const std::string& log_path = log_path_);
-
 	///停止所有日志记录操作并清理内部资源
 	void shutdown();
 
@@ -137,7 +134,11 @@ public:
 	void set_flush_on(spdlog::level::level_enum lvl);
 
 private:
-	logger() = default;
+	///初始化日志
+	bool init(const std::string& log_path = LOG_PATH_);
+
+private:
+	logger();
 	~logger() = default;
 	logger(const logger&) = delete;
 	void operator=(const logger&) = delete;
@@ -147,8 +148,6 @@ private:
 	spdlog::level::level_enum log_level = spdlog::level::trace;
 	std::stringstream m_ss;
 };
-
-
 } // namespace klog
 
 

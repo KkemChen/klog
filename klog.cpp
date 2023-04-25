@@ -1,4 +1,5 @@
-﻿#include "test_log.h"
+﻿#include "klog.h"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/async.h>
 #include <spdlog/logger.h>
@@ -205,7 +206,7 @@ bool klog::logger::init(const std::string& log_path)
 		// constexpr std::size_t max_file_size = 50 * 1024 * 1024; // 50mb
 		//auto rotatingSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, 20 * 1024, 10);
 
-		auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, 20 * 1024 * 1024, 1);
+		auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, SINGLE_FILE_MAX_SIZE, MAX_STORAGE_DAYS);
 		sinks.push_back(rotatingSink);
 
 
@@ -252,6 +253,11 @@ bool klog::logger::init(const std::string& log_path)
 	}
 	is_inited = true;
 	return true;
+}
+
+klog::logger::logger()
+{
+	init();
 }
 
 void klog::logger::shutdown()
