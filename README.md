@@ -41,7 +41,8 @@
 
  
  * 输出：  
-   ![image](https://user-images.githubusercontent.com/44298896/233994979-f6499d74-5eac-49ec-90b3-490c9a278ce4.png)
+   ![Snipaste_2023-04-25_22-31-10](https://user-images.githubusercontent.com/44298896/234310422-7dd1e523-22a9-47fe-adbb-3455ef3dd7b5.png)
+
   
   ---
 
