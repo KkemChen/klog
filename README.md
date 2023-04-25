@@ -16,27 +16,26 @@
   ```cpp
   #include "klog.hpp"
   
-  int main(int argc, char *argv[])
+  int main()
   {
-  	using namespace klog;
-  	if (!logger::get().init("logs/test/test.log")) {
-  		return 1;
-  	}
-  		logger::get().set_level(spdlog::level::trace);
-  		int ret = 0;
-      
-  		LOGINFO() << "test" << 6666;  ///流式输入
-  		loginfo("TEST%d",ret);   ///print输入
-  		LOG_INFO("test {}", 1);  ///fmt输入
-  
-                      // ...
-                      // code...
-                      // ...
-  
-  	logger::get().shutdown();
-  
-  	getchar();
-  	return 0;
+		using namespace klog;
+		logger::get().init("logs/test/test.log")
+
+		logger::get().set_level(spdlog::level::trace);
+		int ret = 0;
+
+		LOGINFO() << "test" << 6666;  ///流式输入
+		loginfo("TEST%d",ret);   ///print输入
+		LOG_INFO("test {}", 1);  ///fmt输入
+
+				  // ...
+				  // code...
+				  // ...
+
+		logger::get().shutdown();
+
+		getchar();
+		return 0;
   }
   ```
 
