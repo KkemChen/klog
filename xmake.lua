@@ -4,6 +4,11 @@ set_symbols("debug")
 add_cxxflags("-std=c++14")
 add_cxxflags("-Wall","-DSPDLOG_COMPILED_LIB")
 
+if is_plat("linux") then
+    add_ldflags("-pthread")
+elseif is_plat("windows") then
+    add_ldflags("-mwindows")
+end
 
 target("demo")
     set_kind("binary")
@@ -11,16 +16,13 @@ target("demo")
     set_targetdir("./build")
     add_files("./*.cpp")
     add_includedirs("include")
-    add_links("spdlog","pthread","stdc++fs")
+    add_links("spdlog","stdc++fs")
     
 target("spdlog")
     set_kind("shared")
     set_targetdir("./build")
     add_files("./src/*.cpp")
     add_includedirs("include")
-    --add_links("pthread", "stdc++fs")
-
-
 
 
 --target("install")

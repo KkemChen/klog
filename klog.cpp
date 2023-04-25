@@ -208,27 +208,38 @@ bool klog::logger::init(const std::string& log_path)
 		auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, 20 * 1024 * 1024, 1);
 		sinks.push_back(rotatingSink);
 
+
 		//auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(log_path.string(), 23, 59); //日志滚动更新时间：每天23:59更新
 		//sinks.push_back(daily_sink);
 
 		// auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), true);
 		// sinks.push_back(file_sink);
 
+#define xxx(sink_)	sink_->set_color(spdlog::level::trace, "\033[36m"); \
+					sink_->set_color(spdlog::level::debug, "\033[1;34m"); \
+					sink_->set_color(spdlog::level::info, "\033[1;32m"); \
+					sink_->set_color(spdlog::level::warn, "\033[1;33m"); \
+					sink_->set_color(spdlog::level::err, "\033[1;31m"); \
+					sink_->set_color(spdlog::level::critical, "\033[1;35m");
+
 #if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
 			auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+			xxx(ms_sink)
 			sinks.push_back(ms_sink);
 #endif //  _DEBUG
 
 #if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
 			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+			xxx(console_sink)
 			sinks.push_back(console_sink);
 #endif
+#undef xx
 		spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
 
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<custom_level_formatter_flag>('*').
-		           set_pattern("%Y-%m-%d %H:%M:%S  %^[%*]%$  |%t|  [%s:%# (%!)]: %v");
+		           set_pattern("%^%Y-%m-%d %H:%M:%S  [%*]  |%t|  [%s:%# (%!)]: %v%$");
 
 		spdlog::set_formatter(std::move(formatter));
 
@@ -267,13 +278,11 @@ void klog::logger::printf(const spdlog::source_loc& loc, spdlog::level::level_en
 	log(loc, lvl, m_ss.str().c_str());
 	m_ss.clear();
 	m_ss.str("");
-
-
 }
 
 spdlog::level::level_enum klog::logger::level()
 {
-	return log_level; 
+	return log_level;
 }
 
 void klog::logger::set_level(spdlog::level::level_enum lvl)
@@ -294,10 +303,9 @@ void klog::logger::log(const spdlog::source_loc& loc, spdlog::level::level_enum 
 	spdlog::log(loc, lvl, fmt, args...);
 }
 
-template <typename ... Args>
+template <typename... Args>
 void klog::logger::fmt_printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
-	const Args&... args)
+                              const Args&... args)
 {
 	spdlog::log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 }
-
