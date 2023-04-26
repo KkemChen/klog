@@ -232,7 +232,7 @@ inline bool logger::init(const std::string& log_path)
 			xxx(console_sink)
 			sinks.push_back(console_sink);
 #endif
-#undef xx
+#undef xxx
 		spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
 
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
