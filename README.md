@@ -1,5 +1,5 @@
 # klog
-基于spdlog封装，支持fmt\printf\流式输入
+基于[spdlog ](https://github.com/gabime/spdlog)封装，支持fmt\printf\流式输入
 
 
 
