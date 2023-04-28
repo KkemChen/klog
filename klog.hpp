@@ -419,8 +419,8 @@ public:
 
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_TRACE)
-#	define	 LOG_TRACE(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__);
-#	define 	 logtrace(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__);
+#	define	 LOG_TRACE(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
+#	define 	 logtrace(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
 #	define	 LOGTRACE() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace)
 #else
 #	define	 LOG_TRACE(fmt, ...)
@@ -429,8 +429,8 @@ public:
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_DEBUG)
-#	define	 LOG_DEBUG(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__);
-#	define 	 logdebug(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__);
+#	define	 LOG_DEBUG(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
+#	define 	 logdebug(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
 #	define	 LOGDEBUG() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug)
 #else
 #	define	 LOG_DEBUG(fmt, ...)
@@ -439,8 +439,8 @@ public:
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_INFO)
-#	define	 LOG_INFO(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__);
-#	define 	 loginfo(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__);
+#	define	 LOG_INFO(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
+#	define 	 loginfo(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
 #	define	 LOGINFO() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info)
 #else
 #	define	 LOG_INFO(fmt, ...)
@@ -449,8 +449,8 @@ public:
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_WARN)
-#	define	 LOG_WARN(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__);
-#	define 	 logwarn(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__);
+#	define	 LOG_WARN(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
+#	define 	 logwarn(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
 #	define	 LOGWARN() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn)
 #else
 #	define	 LOG_WARN(fmt, ...)
@@ -459,8 +459,8 @@ public:
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_ERROR)
-#	define	 LOG_ERROR(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__);
-#	define 	 logerror(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__);
+#	define	 LOG_ERROR(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define 	 logerror(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
 #	define	 LOGERROR() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err)
 #else
 #	define	 LOG_ERROR(fmt, ...)
@@ -469,8 +469,8 @@ public:
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_FATAL)
-#	define	 LOG_FATAL(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__);
-#	define 	 logfatal(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__);
+#	define	 LOG_FATAL(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
+#	define 	 logfatal(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
 #	define	 LOGFATAL() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical)
 #else
 #	define	 LOG_FATAL(fmt, ...)
