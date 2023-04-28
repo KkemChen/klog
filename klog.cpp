@@ -36,11 +36,6 @@ void klog::custom_level_formatter_flag::format(const spdlog::details::log_msg& _
 	}
 }
 
-std::unique_ptr<spdlog::custom_flag_formatter> klog::custom_level_formatter_flag::clone() const
-{
-	return spdlog::details::make_unique<custom_level_formatter_flag>();
-}
-
 klog::custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t log_path,
                                                            std::size_t max_size,
                                                            std::size_t max_storage_days,
@@ -90,12 +85,6 @@ spdlog::filename_t klog::custom_rotating_file_sink::calc_filename()
 		                                 tm); /// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
 }
 
-spdlog::filename_t klog::custom_rotating_file_sink::filename()
-{
-	std::lock_guard<std::mutex> lock(base_sink<std::mutex>::mutex_);
-	return m_file_helper.filename();
-}
-
 void klog::custom_rotating_file_sink::sink_it_(const spdlog::details::log_msg& msg)
 {
 	spdlog::memory_buf_t formatted;
@@ -113,10 +102,6 @@ void klog::custom_rotating_file_sink::sink_it_(const spdlog::details::log_msg& m
 	m_current_size = new_size;
 }
 
-void klog::custom_rotating_file_sink::flush_()
-{
-	m_file_helper.flush();
-}
 
 void klog::custom_rotating_file_sink::rotate_()
 {
@@ -164,25 +149,6 @@ void klog::custom_rotating_file_sink::cleanup_file_()
 	}
 }
 
-klog::logger::log_stream::log_stream(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl)
-	: loc(_loc)
-	, lvl(_lvl) {}
-
-klog::logger::log_stream::~log_stream()
-{
-	flush();
-}
-
-void klog::logger::log_stream::flush()
-{
-	logger::get().log(loc, lvl, str().c_str());
-}
-
-klog::logger& klog::logger::get()
-{
-	static logger logger;
-	return logger;
-}
 
 bool klog::logger::init(const std::string& log_path)
 {
@@ -255,15 +221,6 @@ bool klog::logger::init(const std::string& log_path)
 	return true;
 }
 
-klog::logger::logger()
-{
-	init();
-}
-
-void klog::logger::shutdown()
-{
-	spdlog::shutdown();
-}
 
 void klog::logger::printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, ...)
 {
@@ -284,34 +241,4 @@ void klog::logger::printf(const spdlog::source_loc& loc, spdlog::level::level_en
 	log(loc, lvl, m_ss.str().c_str());
 	m_ss.clear();
 	m_ss.str("");
-}
-
-spdlog::level::level_enum klog::logger::level()
-{
-	return log_level;
-}
-
-void klog::logger::set_level(spdlog::level::level_enum lvl)
-{
-	log_level = lvl;
-	spdlog::set_level(lvl);
-}
-
-void klog::logger::set_flush_on(spdlog::level::level_enum lvl)
-{
-	spdlog::flush_on(lvl);
-}
-
-template <typename... Args>
-void klog::logger::log(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
-                       const Args&... args)
-{
-	spdlog::log(loc, lvl, fmt, args...);
-}
-
-template <typename... Args>
-void klog::logger::fmt_printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
-                              const Args&... args)
-{
-	spdlog::log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 }
