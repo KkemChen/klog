@@ -27,8 +27,8 @@
 namespace klog
 {
 constexpr const char* LOG_PATH_ = "logs/test.log";						//默认日志存储路径
-constexpr std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;	//单个日志文件最大大小(20M)
-constexpr std::size_t MAX_STORAGE_DAYS = 1;						//日志保存时间(天)
+constexpr const std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;	//单个日志文件最大大小(20M)
+constexpr const std::size_t MAX_STORAGE_DAYS = 1;						//日志保存时间(天)
 
 ///自定义level flag
 class custom_level_formatter_flag : public spdlog::custom_flag_formatter
@@ -81,7 +81,7 @@ private:
 
 	//spdlog::filename_t base_filename_;
 	std::size_t m_max_size;
-	std::size_t max_storage_days;
+	std::size_t m_max_storage_days;
 	std::size_t m_current_size;
 	spdlog::details::file_helper m_file_helper;
 	std::experimental::filesystem::path m_log_basename;

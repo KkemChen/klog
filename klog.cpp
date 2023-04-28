@@ -48,7 +48,7 @@ klog::custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t lo
                                                            const spdlog::file_event_handlers& event_handlers)
 	: m_log_path(log_path)
 	, m_max_size(max_size)
-	, max_storage_days(max_storage_days)
+	, m_max_storage_days(max_storage_days)
 	, m_file_helper{event_handlers}
 {
 	if (max_size == 0) {
@@ -155,9 +155,9 @@ void klog::custom_rotating_file_sink::cleanup_file_()
 
 				const double days = duration.count() / (24 * 60 * 60); // 将时间差转换为天数
 
-				if (days > max_storage_days) {
+				if (days > m_max_storage_days) {
 					fs::remove_all(p);
-					std::cout << "Clean up log files older than" << max_storage_days << " days" << std::endl;
+					std::cout << "Clean up log files older than" << m_max_storage_days << " days" << std::endl;
 				}
 			}
 		}
@@ -234,13 +234,13 @@ bool klog::logger::init(const std::string& log_path)
 			xxx(console_sink)
 			sinks.push_back(console_sink);
 #endif
-#undef xxx
+#undef xx
 		spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
 
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<custom_level_formatter_flag>('*').
-		           set_pattern("%^%Y-%m-%d %H:%M:%S  [%*]  |%t|  [%s:%# (%!)]: %v%$");
+		           set_pattern("%^[%Y-%m-%d %H:%M:%S] [%*] |%t| [<%!> %s:%#]: %v%$");
 
 		spdlog::set_formatter(std::move(formatter));
 
