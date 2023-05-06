@@ -14,8 +14,8 @@
 #include <spdlog/common.h>
 
 void klog::custom_level_formatter_flag::format(const spdlog::details::log_msg& _log_msg,
-                                               const std::tm&,
-                                               spdlog::memory_buf_t& dest)
+	const std::tm&,
+	spdlog::memory_buf_t& dest)
 {
 	switch (_log_msg.level) {
 #undef DEBUG
@@ -25,26 +25,26 @@ void klog::custom_level_formatter_flag::format(const spdlog::details::log_msg& _
 						dest.append(msg.data(), msg.data() + msg.size()); \
 						break; }
 
-	xx(spdlog::level::trace, TRACE)
-	xx(spdlog::level::debug, DEBUG)
-	xx(spdlog::level::info, INFO)
-	xx(spdlog::level::warn, WARN)
-	xx(spdlog::level::err, ERROR)
-	xx(spdlog::level::critical, FATAL)
+		xx(spdlog::level::trace, TRACE)
+			xx(spdlog::level::debug, DEBUG)
+			xx(spdlog::level::info, INFO)
+			xx(spdlog::level::warn, WARN)
+			xx(spdlog::level::err, ERROR)
+			xx(spdlog::level::critical, FATAL)
 #undef xx
 	default: break;
 	}
 }
 
 klog::custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t log_path,
-                                                           std::size_t max_size,
-                                                           std::size_t max_storage_days,
-                                                           bool rotate_on_open,
-                                                           const spdlog::file_event_handlers& event_handlers)
+	std::size_t max_size,
+	std::size_t max_storage_days,
+	bool rotate_on_open,
+	const spdlog::file_event_handlers& event_handlers)
 	: m_log_path(log_path)
 	, m_max_size(max_size)
 	, m_max_storage_days(max_storage_days)
-	, m_file_helper{event_handlers}
+	, m_file_helper{ event_handlers }
 {
 	if (max_size == 0) {
 		spdlog::throw_spdlog_ex("rotating sink constructor: max_size arg cannot be zero");
@@ -64,6 +64,9 @@ klog::custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t lo
 
 	m_file_helper.open(calc_filename());
 	m_current_size = m_file_helper.size(); // expensive. called only once
+
+	cleanup_file_();
+
 	if (rotate_on_open && m_current_size > 0) {
 		rotate_();
 		m_current_size = 0;
@@ -77,12 +80,12 @@ spdlog::filename_t klog::custom_rotating_file_sink::calc_filename()
 	localtime_r(&now, &tm);
 
 	return m_log_parent_path.empty()
-		       ? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log", tm, m_log_basename.string(), tm)
-		       : spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log",
-		                                 m_log_parent_path.string(),
-		                                 tm,
-		                                 m_log_basename.string(),
-		                                 tm); /// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
+		? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log", tm, m_log_basename.string(), tm)
+		: spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log",
+			m_log_parent_path.string(),
+			tm,
+			m_log_basename.string(),
+			tm); /// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
 }
 
 void klog::custom_rotating_file_sink::sink_it_(const spdlog::details::log_msg& msg)
@@ -129,7 +132,7 @@ void klog::custom_rotating_file_sink::cleanup_file_()
 				const int mon = std::stoi(folder_name.substr(5, 7));
 				const int day = std::stoi(folder_name.substr(8, 10));
 
-				std::tm date1_tm{0, 0, 0, day, mon - 1, year - 1900};
+				std::tm date1_tm{ 0, 0, 0, day, mon - 1, year - 1900 };
 				const std::time_t date_tt = std::mktime(&date1_tm);
 
 				const std::chrono::system_clock::time_point time = std::chrono::system_clock::from_time_t(date_tt);
@@ -190,14 +193,14 @@ bool klog::logger::init(const std::string& log_path)
 					sink_->set_color(spdlog::level::critical, "\033[1;35m");
 
 #if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-			xxx(ms_sink)
+		auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+		xxx(ms_sink)
 			sinks.push_back(ms_sink);
 #endif //  _DEBUG
 
 #if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-			xxx(console_sink)
+		auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+		xxx(console_sink)
 			sinks.push_back(console_sink);
 #endif
 #undef xx
@@ -206,14 +209,15 @@ bool klog::logger::init(const std::string& log_path)
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<custom_level_formatter_flag>('*').
-		           set_pattern("%^[%Y-%m-%d %H:%M:%S] [%*] |%t| [<%!> %s:%#]: %v%$");
+			set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [<%!> %s:%#]: %v%$");
 
 		spdlog::set_formatter(std::move(formatter));
 
 		spdlog::flush_every(std::chrono::seconds(5));
 		spdlog::flush_on(spdlog::level::warn);
 		spdlog::set_level(log_level);
-	} catch (std::exception_ptr e) {
+	}
+	catch (std::exception_ptr e) {
 		assert(false);
 		return false;
 	}

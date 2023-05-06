@@ -28,9 +28,9 @@
 /// spdlog wrap class
 namespace klog
 {
-	constexpr const char* LOG_PATH_            = "logs/test.log"; //默认日志存储路径
+	constexpr const char* LOG_PATH_ = "logs/test.log"; //默认日志存储路径
 	constexpr std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
-	constexpr std::size_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
+	constexpr std::size_t MAX_STORAGE_DAYS = 1;               //日志保存时间(天)
 
 	///自定义level flag
 	class custom_level_formatter_flag : public spdlog::custom_flag_formatter
@@ -55,7 +55,7 @@ namespace klog
 	{
 	public:
 		/**
-		 * \brief 
+		 * \brief
 		 * \param log_path 日志存储路径
 		 * \param max_size 单文件最大容量
 		 * \param max_storage_days 最大保存天数
@@ -63,9 +63,9 @@ namespace klog
 		 * \param event_handlers 默认
 		 */
 		custom_rotating_file_sink(spdlog::filename_t log_path,
-		                          std::size_t max_size,
-		                          std::size_t max_storage_days,
-		                          bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
+			std::size_t max_size,
+			std::size_t max_storage_days,
+			bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
 
 		spdlog::filename_t calc_filename();
 
@@ -109,7 +109,7 @@ namespace klog
 		struct log_stream : public std::ostringstream
 		{
 		public:
-			log_stream(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl): loc(_loc), lvl(_lvl) {}
+			log_stream(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl) : loc(_loc), lvl(_lvl) {}
 
 			~log_stream() { flush(); }
 
@@ -143,7 +143,7 @@ namespace klog
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
 		void fmt_printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
-		                const Args&... args)
+			const Args&... args)
 		{
 			spdlog::log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 		}
@@ -167,12 +167,12 @@ namespace klog
 	private:
 		logger() { init(); }
 
-		~logger()                     = default;
-		logger(const logger&)         = delete;
+		~logger() = default;
+		logger(const logger&) = delete;
 		void operator=(const logger&) = delete;
 
 	private:
-		std::atomic_bool is_inited          = {false};
+		std::atomic_bool is_inited = { false };
 		spdlog::level::level_enum log_level = spdlog::level::trace;
 		std::stringstream m_ss;
 	};
@@ -194,9 +194,10 @@ namespace klog
 #	define 	 logtrace(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
 #	define	 LOGTRACE() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace)
 #else
-#	define	 LOG_TRACE(fmt, ...)
-#	define 	 PRINT_TRACE(fmt,...)
-#	define	 STREAM_TRACE() klog::logger_none::get()
+#	define	 log_trace(fmt,...)
+#	define 	 LOG_TRACE(fmt, ...)
+#	define 	 logtrace(fmt,...)
+#	define	 LOGTRACE() klog::logger_none::get()
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_DEBUG)
@@ -205,9 +206,10 @@ namespace klog
 #	define 	 logdebug(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
 #	define	 LOGDEBUG() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug)
 #else
-#	define	 LOG_DEBUG(fmt, ...)
-#	define 	 PRINT_DEBUG(fmt,...)
-#	define	 STREAM_DEBUG() klog::logger_none::get()
+#	define	 log_debug(fmt, ...)
+#	define 	 LOG_DEBUG(fmt,...)
+#	define 	 logdebug(fmt,...)
+#	define	 LOGDEBUG() klog::logger_none::get()
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_INFO)
@@ -216,9 +218,10 @@ namespace klog
 #	define 	 loginfo(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
 #	define	 LOGINFO() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info)
 #else
-#	define	 LOG_INFO(fmt, ...)
-#	define 	 PRINT_INFO(fmt,...)
-#	define	 STREAM_INFO() klog::logger_none::get()
+#	define	 log_info(fmt, ...)
+#	define 	 LOG_INFO(fmt,...)
+#	define 	 loginfo(fmt,...)
+#	define	 LOGINFO() klog::logger_none::get()
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_WARN)
@@ -227,9 +230,10 @@ namespace klog
 #	define 	 logwarn(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
 #	define	 LOGWARN() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn)
 #else
-#	define	 LOG_WARN(fmt, ...)
-#	define 	 PRINT_WARN(fmt,...)
-#	define	 STREAM_WARN() klog::logger_none::get()
+#	define	 log_warn(fmt, ...)
+#	define 	 LOG_WARN(fmt,...)
+#	define 	 logwarn(fmt,...)
+#	define	 LOGWARN() klog::logger_none::get()
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_ERROR)
@@ -238,9 +242,10 @@ namespace klog
 #	define 	 logerror(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
 #	define	 LOGERROR() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err)
 #else
-#	define	 LOG_ERROR(fmt, ...)
-#	define 	 PRINT_ERROR(fmt,...)
-#	define	 STREAM_ERROR() klog::logger_none::get()
+#	define	 log_error(fmt, ...)
+#	define 	 LOG_ERROR(fmt,...)
+#	define 	 logerror(fmt,...)
+#	define	 LOGERROR() klog::logger_none::get()
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_FATAL)
@@ -249,7 +254,8 @@ namespace klog
 #	define 	 logfatal(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
 #	define	 LOGFATAL() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical)
 #else
-#	define	 LOG_FATAL(fmt, ...)
-#	define 	 PRINT_FATAL(fmt,...)
-#	define	 STREAM_FATAL() klog::logger_none::get()
+#	define	 log_fatal(fmt, ...)
+#	define 	 LOG_FATAL(fmt,...)
+#	define 	 logfatal(fmt,...)
+#	define	 LOGFATAL() klog::logger_none::get()
 #endif
