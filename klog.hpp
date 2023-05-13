@@ -34,11 +34,28 @@
 /// spdlog wrap class
 namespace klog
 {
-	constexpr const char* LOG_PATH_ = "logs/test.log"; //默认日志存储路径
+	constexpr const char* LOG_PATH            = "logs/test.log"; //默认日志存储路径
 	constexpr std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
-	constexpr std::size_t MAX_STORAGE_DAYS = 1;               //日志保存时间(天)
+	constexpr std::size_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
+
+	enum MODE
+	{
+		MAIN_STDOUT = 1 << 0,	//主日志控制台输出
+		MAIN_FILE = 1 << 1,		//主日志文件输出
+		TEMP_STDOUT = 1 << 2,	//附加临时日志控制台输出
+		TEMP_FILE = 1 << 3,		//附加临时日志文件输出
+		ASYNC = 1 << 4			//异步日志模式
+	};
 
 	class custom_level_formatter_flag;
+
+
+#define xxx(sink_)	sink_->set_color(spdlog::level::trace, "\033[36m"); \
+					sink_->set_color(spdlog::level::debug, "\033[1;34m"); \
+					sink_->set_color(spdlog::level::info, "\033[1;32m"); \
+					sink_->set_color(spdlog::level::warn, "\033[1;33m"); \
+					sink_->set_color(spdlog::level::err, "\033[1;31m"); \
+					sink_->set_color(spdlog::level::critical, "\033[1;35m");
 
 	/**
 	 * \brief 自定义sink
@@ -58,13 +75,12 @@ namespace klog
 		 * \param event_handlers 默认
 		 */
 		custom_rotating_file_sink(spdlog::filename_t log_path,
-			std::size_t max_size,
-			std::size_t max_storage_days,
-			bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
+		                          std::size_t max_size,
+		                          std::size_t max_storage_days,
+		                          bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
 
-		spdlog::filename_t calc_filename();
-		spdlog::filename_t filename();
-
+		void SetSaveDays(uint32_t days) { m_max_storage_days = days; }
+		void SetMaxFileSize(uint32_t size) { m_max_size = size; }
 	protected:
 		///将日志消息写入到输出目标 
 		void sink_it_(const spdlog::details::log_msg& msg) override;
@@ -73,14 +89,17 @@ namespace klog
 		void flush_() override { m_file_helper.flush(); }
 
 	private:
+		spdlog::filename_t calc_filename();
+		spdlog::filename_t filename();
+
 		///日志轮转 
 		void rotate_();
 
 		///清理过期日志文件 
 		void cleanup_file_();
 
-		std::size_t m_max_size;
-		std::size_t m_max_storage_days;
+		std::atomic<uint32_t> m_max_size;
+		std::atomic<uint32_t> m_max_storage_days;
 		std::size_t m_current_size;
 		spdlog::details::file_helper m_file_helper;
 		std::experimental::filesystem::path m_log_basename;
@@ -107,12 +126,27 @@ namespace klog
 			spdlog::level::level_enum lvl = spdlog::level::info;
 		};
 
+		struct log_stream_ : public std::ostringstream
+		{
+		public:
+			log_stream_(const spdlog::source_loc& _loc, spdlog::level::level_enum _lvl) : loc(_loc), lvl(_lvl) { }
+
+			~log_stream_() { flush(); }
+
+			void flush_() { logger::get()._temp_log->log(loc, lvl, str().c_str()); }
+
+		private:
+			spdlog::source_loc loc;
+			spdlog::level::level_enum lvl = spdlog::level::info;
+		};
+
 	public:
 		static logger& get()
 		{
 			static logger logger;
 			return logger;
 		}
+
 
 		///停止所有日志记录操作并清理内部资源
 		void shutdown() { spdlog::shutdown(); }
@@ -130,9 +164,9 @@ namespace klog
 			auto fun = [](void* self, const char* fmt, va_list al) {
 				auto thiz = static_cast<logger*>(self);
 				char* buf = nullptr;
-				int len = vasprintf(&buf, fmt, al);
+				int len   = vasprintf(&buf, fmt, al);
 				if (len != -1) {
-					thiz->m_ss << std::string(buf, len);
+					thiz->_ss << std::string(buf, len);
 					free(buf);
 				}
 			};
@@ -141,53 +175,104 @@ namespace klog
 			va_start(al, fmt);
 			fun(this, fmt, al);
 			va_end(al);
-			log(loc, lvl, m_ss.str().c_str());
-			m_ss.clear();
-			m_ss.str("");
+			log(loc, lvl, _ss.str().c_str());
+			_ss.clear();
+			_ss.str("");
 		}
 
 
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
 		void fmt_printf(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
-			const Args&... args)
+		                const Args&... args)
 		{
 			spdlog::log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 		}
 
-		spdlog::level::level_enum level() { return log_level; }
+		/*********templog**********/
+		///spdlog输出
+		template <typename... Args>
+		void log_(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, const Args&... args)
+		{
+			_temp_log->log(loc, lvl, fmt, args...);
+		}
+
+		///传统printf输出
+		void printf_(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt, ...)
+		{
+			auto fun = [](void* self, const char* fmt, va_list al) {
+				auto thiz = static_cast<logger*>(self);
+				char* buf = nullptr;
+				int len = vasprintf(&buf, fmt, al);
+				if (len != -1) {
+					thiz->_ss << std::string(buf, len);
+					free(buf);
+				}
+			};
+
+			va_list al;
+			va_start(al, fmt);
+			fun(this, fmt, al);
+			va_end(al);
+			log_(loc, lvl, _ss.str().c_str());
+			_ss.clear();
+			_ss.str("");
+		}
+
+
+		///fmt的printf输出（不支持格式化非void类型指针）
+		template <typename... Args>
+		void fmt_printf_(const spdlog::source_loc& loc, spdlog::level::level_enum lvl, const char* fmt,
+			const Args&... args)
+		{
+			_temp_log->log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
+		}
+
+
+		///当前级别
+		spdlog::level::level_enum level() { return _log_level; }
 
 		///设置输出级别
 		void set_level(spdlog::level::level_enum lvl)
 		{
-			log_level = lvl;
+			_log_level = lvl;
 			spdlog::set_level(lvl);
 		}
 
 		///设置刷新达到指定级别时自动刷新缓冲区
 		void set_flush_on(spdlog::level::level_enum lvl) { spdlog::flush_on(lvl); }
 
-	private:
-		///初始化日志
-		bool init(const std::string& log_path = LOG_PATH_);
+		/**
+		 * \brief 初始化日志
+		 * \param log_path 日志路径：默认"logs/test.log"
+		 * \param mode 1:控制台 2:文件 3:开启临时调试日志(仅控制台) 4:开启临时调试日志(控制台+文件)
+		 * \return 
+		 */
+		bool init(const std::string& log_path = LOG_PATH, int mode = MAIN_STDOUT);
+
+
+		std::shared_ptr<spdlog::logger> tmp_logger()
+		{
+			return _temp_log;
+		}
 
 	private:
-		logger() { init(); }
-
-		~logger() = default;
-		logger(const logger&) = delete;
+		logger()                      = default;
+		~logger()                     = default;
+		logger(const logger&)         = delete;
 		void operator=(const logger&) = delete;
 
 	private:
-		std::atomic_bool is_inited = { false };
-		spdlog::level::level_enum log_level = spdlog::level::trace;
-		std::stringstream m_ss;
+		std::atomic_bool _is_inited          = {false};
+		spdlog::level::level_enum _log_level = spdlog::level::trace;
+		std::stringstream _ss;
+
+		std::shared_ptr<spdlog::logger> _temp_log;
 	};
 
-	inline bool logger::init(const std::string& log_path)
+	inline bool logger::init(const std::string& log_path, int mode)
 	{
-		namespace fs = std::experimental::filesystem;
-		if (is_inited) return true;
+		if (_is_inited) return true;
 		try {
 			namespace fs = std::experimental::filesystem;
 			fs::path log_file_path(log_path);
@@ -206,65 +291,127 @@ namespace klog
 			// constexpr std::size_t max_file_size = 50 * 1024 * 1024; // 50mb
 			//auto rotatingSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file_path, 20 * 1024, 10);
 
-			auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, SINGLE_FILE_MAX_SIZE,
-				MAX_STORAGE_DAYS);
-			sinks.push_back(rotatingSink);
-
 			//auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(log_path.string(), 23, 59); //日志滚动更新时间：每天23:59更新
 			//sinks.push_back(daily_sink);
 
 			// auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), true);
 			// sinks.push_back(file_sink);
 
-#define xxx(sink_)	sink_->set_color(spdlog::level::trace, "\033[36m"); \
-					sink_->set_color(spdlog::level::debug, "\033[1;34m"); \
-					sink_->set_color(spdlog::level::info, "\033[1;32m"); \
-					sink_->set_color(spdlog::level::warn, "\033[1;33m"); \
-					sink_->set_color(spdlog::level::err, "\033[1;31m"); \
-					sink_->set_color(spdlog::level::critical, "\033[1;35m");
-
+			//控制台输出
+			if (mode & MAIN_STDOUT) {
 #if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-			xxx(ms_sink)
-				sinks.push_back(ms_sink);
+				auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+				xxx(ms_sink)
+					sinks.push_back(ms_sink);
 #endif //  _DEBUG
 
 #if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-			xxx(console_sink)
-				sinks.push_back(console_sink);
+				auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+				xxx(console_sink)
+					sinks.push_back(console_sink);
 #endif
-#undef xxx
-			spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
+			}
+
+			//文件输出
+			if (mode & MAIN_FILE) {
+				auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(log_path, SINGLE_FILE_MAX_SIZE,
+					MAX_STORAGE_DAYS);
+				sinks.push_back(rotatingSink);
+			}
+
+			//异步
+			if (mode & ASYNC) {
+				spdlog::set_default_logger(std::make_shared<spdlog::async_logger>(basename, sinks.begin(), sinks.end(),
+					                           spdlog::thread_pool(), spdlog::async_overflow_policy::block));
+			}
+			else {
+				spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
+			}
 
 			auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 			formatter->add_flag<custom_level_formatter_flag>('*').
-				set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+			           set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
 
 			spdlog::set_formatter(std::move(formatter));
 
 			spdlog::flush_every(std::chrono::seconds(5));
 			spdlog::flush_on(spdlog::level::warn);
-			spdlog::set_level(log_level);
-		}
-		catch (std::exception_ptr e) {
+			spdlog::set_level(_log_level);
+		} catch (std::exception_ptr e) {
 			assert(false);
 			return false;
 		}
-		is_inited = true;
+		_is_inited = true;
+
+		//临时日志
+		[this,log_path,mode]() {
+			auto tmp = log_path;
+			auto pos = tmp.rfind('/');
+			if (pos != std::string::npos) {
+				tmp.insert(pos + 1, "Temp_");
+			}
+
+			namespace fs = std::experimental::filesystem;
+			fs::path log_file_path(tmp);
+			fs::path log_filename = log_file_path.filename();
+
+			spdlog::filename_t basename, ext;
+			std::tie(basename, ext) = spdlog::details::file_helper::split_by_extension(log_filename.string());
+
+			std::vector<spdlog::sink_ptr> sinks;
+
+			//控制台输出
+			if (mode & TEMP_STDOUT) {
+#if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
+				auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+				xxx(ms_sink)
+					sinks.push_back(ms_sink);
+#endif //  _DEBUG
+
+#if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
+				auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+				xxx(console_sink)
+					sinks.push_back(console_sink);
+#endif
+			}
+			//文件输出
+			if (mode & TEMP_FILE) {
+				auto rotatingSink = std::make_shared<klog::custom_rotating_file_sink>(tmp, SINGLE_FILE_MAX_SIZE,
+					MAX_STORAGE_DAYS);
+				sinks.push_back(rotatingSink);
+			}
+
+			if (mode & ASYNC) {
+				_temp_log = std::make_shared<spdlog::async_logger>(basename, sinks.begin(), sinks.end(),
+				                                                   spdlog::thread_pool(),
+				                                                   spdlog::async_overflow_policy::block);
+			}
+			else {
+				_temp_log = std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end());
+			}
+
+			auto formatter = std::make_unique<spdlog::pattern_formatter>();
+
+			formatter->add_flag<custom_level_formatter_flag>('*').
+			           set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+
+			_temp_log->set_formatter(std::move(formatter));
+			_temp_log->flush_on(spdlog::level::trace);
+			_temp_log->set_level(spdlog::level::trace);
+		}();
 		return true;
 	}
 
 
 	inline custom_rotating_file_sink::custom_rotating_file_sink(spdlog::filename_t log_path,
-		std::size_t max_size,
-		std::size_t max_storage_days, bool rotate_on_open,
-		const spdlog::file_event_handlers& event_handlers)
+	                                                            std::size_t max_size,
+	                                                            std::size_t max_storage_days, bool rotate_on_open,
+	                                                            const spdlog::file_event_handlers& event_handlers)
 		: m_log_path(log_path)
 		, m_max_size(max_size)
 		, m_max_storage_days(max_storage_days)
-		, m_file_helper{ event_handlers }
+		, m_file_helper{event_handlers}
 	{
 		if (max_size == 0) {
 			spdlog::throw_spdlog_ex("rotating sink constructor: max_size arg cannot be zero");
@@ -275,7 +422,7 @@ namespace klog
 		}
 
 		m_log_parent_path = m_log_path.parent_path();
-		m_log_filename = m_log_path.filename();
+		m_log_filename    = m_log_path.filename();
 
 		spdlog::filename_t basename, ext;
 		std::tie(basename, ext) = spdlog::details::file_helper::split_by_extension(m_log_filename.string());
@@ -300,12 +447,12 @@ namespace klog
 		localtime_r(&now, &tm);
 
 		return m_log_parent_path.empty()
-			? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log", tm, m_log_basename.string(), tm)
-			: spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log",
-				m_log_parent_path.string(),
-				tm,
-				m_log_basename.string(),
-				tm);/// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
+			       ? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log", tm, m_log_basename.string(), tm)
+			       : spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log",
+			                                 m_log_parent_path.string(),
+			                                 tm,
+			                                 m_log_basename.string(),
+			                                 tm);/// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
 	}
 
 	inline spdlog::filename_t custom_rotating_file_sink::filename()
@@ -354,10 +501,10 @@ namespace klog
 				const std::string folder_name = p.path().filename().string();
 				if (std::regex_match(folder_name, folder_regex)) {
 					const int year = std::stoi(folder_name.substr(0, 4));
-					const int mon = std::stoi(folder_name.substr(5, 7));
-					const int day = std::stoi(folder_name.substr(8, 10));
+					const int mon  = std::stoi(folder_name.substr(5, 7));
+					const int day  = std::stoi(folder_name.substr(8, 10));
 
-					std::tm date1_tm{ 0, 0, 0, day, mon - 1, year - 1900 };
+					std::tm date1_tm{0, 0, 0, day, mon - 1, year - 1900};
 					const std::time_t date_tt = std::mktime(&date1_tm);
 
 					const std::chrono::system_clock::time_point time = std::chrono::system_clock::from_time_t(date_tt);
@@ -391,12 +538,12 @@ namespace klog
 					dest.append(msg.data(), msg.data() + msg.size()); \
 					break; }
 
-				xx(spdlog::level::trace, TRACE)
-					xx(spdlog::level::debug, DEBUG)
-					xx(spdlog::level::info, INFO)
-					xx(spdlog::level::warn, WARN)
-					xx(spdlog::level::err, ERROR)
-					xx(spdlog::level::critical, FATAL)
+			xx(spdlog::level::trace, TRACE)
+			xx(spdlog::level::debug, DEBUG)
+			xx(spdlog::level::info, INFO)
+			xx(spdlog::level::warn, WARN)
+			xx(spdlog::level::err, ERROR)
+			xx(spdlog::level::critical, FATAL)
 #undef xx
 			default: break;
 			}
@@ -407,6 +554,7 @@ namespace klog
 			return spdlog::details::make_unique<custom_level_formatter_flag>();
 		}
 	};
+#undef xxx
 }// namespace klog
 
 
@@ -468,10 +616,10 @@ namespace klog
 #endif
 
 #if (LOGGER_LEVEL <= LOG_LEVEL_ERROR)
-#	define 	 log_error(fmt,...) 		klog::logger::get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
-#	define	 LOG_ERROR(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
-#	define 	 logerror(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
-#	define	 LOGERROR() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err)
+#	define 	 log_err(fmt,...) 		klog::logger::get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define	 LOG_ERR(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define 	 logerr(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define	 LOGERR() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err)
 #else
 #	define	 log_error(fmt, ...)
 #	define 	 LOG_ERROR(fmt,...)
@@ -490,3 +638,38 @@ namespace klog
 #	define 	 logfatal(fmt,...)
 #	define	 LOGFATAL() klog::logger_none::get()
 #endif
+
+
+/////////////////////////////////////////////////////
+
+
+#	define 	 log_trace_(fmt,...) 		klog::logger::get().fmt_printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
+#	define	 LOG_TRACE_(fmt, ...) 		klog::logger::get().log_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
+#	define 	 logtrace_(fmt,...) 		klog::logger::get().printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace, fmt, ##__VA_ARGS__)
+#	define	 LOGTRACE_() 			klog::logger::log_stream_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::trace)
+
+#	define 	 log_debug_(fmt,...) 		klog::logger::get().fmt_printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
+#	define	 LOG_DEBUG_(fmt, ...) 		klog::logger::get().log_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
+#	define 	 logdebug_(fmt,...) 		klog::logger::get().printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug, fmt, ##__VA_ARGS__)
+#	define	 LOGDEBUG_() 			klog::logger::log_stream_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::debug)
+
+
+#	define 	 log_info_(fmt,...) 		klog::logger::get().fmt_printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
+#	define	 LOG_INFO_(fmt, ...) 		klog::logger::get().log_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
+#	define 	 loginfo_(fmt,...) 		klog::logger::get().printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info, fmt, ##__VA_ARGS__)
+#	define	 LOGINFO_() 			klog::logger::log_stream_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::info)
+
+#	define 	 log_warn_(fmt,...) 		klog::logger::get().fmt_printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
+#	define	 LOG_WARN_(fmt, ...) 		klog::logger::get().log_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
+#	define 	 logwarn_(fmt,...) 		klog::logger::get().printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn, fmt, ##__VA_ARGS__)
+#	define	 LOGWARN_() 			klog::logger::log_stream_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::warn)
+
+#	define 	 log_err_(fmt,...) 		klog::logger::get().fmt_printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define	 LOG_ERR_(fmt, ...) 		klog::logger::get().log_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define 	 logerr_(fmt,...) 		klog::logger::get().printf_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err, fmt, ##__VA_ARGS__)
+#	define	 LOGERR_() 			klog::logger::log_stream_({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::err)
+
+#	define 	 log_fatal_(fmt,...) 		klog::logger::get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
+#	define	 LOG_FATAL_(fmt, ...) 		spdlog::log({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
+#	define 	 logfatal_(fmt,...) 		klog::logger::get().printf({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical, fmt, ##__VA_ARGS__)
+#	define	 LOGFATAL_() 			klog::logger::log_stream({__FILE__, __LINE__, __FUNCTION__}, spdlog::level::critical)
