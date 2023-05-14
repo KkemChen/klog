@@ -1,7 +1,7 @@
 # klog
 基于[spdlog ](https://github.com/gabime/spdlog)封装，支持fmt\printf\流式输入
 
-> main分支为header—only，仅需包含Log.hpp既可使用
+> main分支为header—only，仅需包含Log.hpp既可使用  
 > lib分支为单独编译为动态库
 
 ### xmake构建
