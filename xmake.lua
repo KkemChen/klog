@@ -16,13 +16,14 @@ target("demo")
     set_targetdir("./build")
     add_files("./*.cpp")
     add_includedirs("include")
-    add_links("spdlog","stdc++fs")
+    add_links("stdc++fs","spdlog")
     
 target("spdlog")
     set_kind("shared")
     set_targetdir("./build")
-    add_files("./src/*.cpp")
     add_includedirs("include")
+    add_files("./src/*.cpp")
+    add_files("Log.cpp")
 
 
 --target("install")
