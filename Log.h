@@ -1,42 +1,52 @@
 ﻿#pragma once
+
+// 检查 C++ 标准版本是否为 C++17 或更高版本
+#if __cplusplus < 201703L || _MSVC_LANG < 201703L
+	#if defined(_WIN32) && _MSC_VER >= 1910
+	#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#endif
+#include <experimental/filesystem>
+	namespace std{
+		namespace filesystem = experimental::filesystem;
+	}
+#else
+	#include <filesystem>
+#endif
+
 #include <cstdarg>
 #include <fstream>
 #include <sstream>
 #include <memory>
 #include <regex>
 #include <iostream>
-#include <experimental/filesystem>  //C++ 11兼容   C++17可直接用<filsesystem>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/pattern_formatter.h>
-#include <spdlog/sinks/base_sink.h>
-#include <spdlog/common.h>
+#include <spdlog/async.h>
+#include <spdlog/logger.h>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/fmt/bundled/printf.h>
-#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
-
-#if WIN32
-#ifndef NOMINMAX
-#	undef min
-#	undef max
-#endif
-#endif
+#include <spdlog/sinks/msvc_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/common.h>
 
 
-/// spdlog wrap class
 namespace kkem
 {
-	constexpr const char* LOG_PATH = "logs/test.log"; //默认日志存储路径
-	constexpr std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
-	constexpr std::size_t MAX_STORAGE_DAYS = 1;               //日志保存时间(天)
+	constexpr const char* LOG_PATH          = "logs/test.log"; //默认日志存储路径
+	constexpr uint32_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
+	constexpr uint32_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
 
 	enum LogMode
 	{
-		STDOUT = 1 << 0,	//主日志控制台输出
-		FILEOUT = 1 << 1,	//主日志文件输出
-		ASYNC = 1 << 2		//异步日志模式
+		STDOUT = 1 << 0,
+		//主日志控制台输出
+		FILEOUT = 1 << 1,
+		//主日志文件输出
+		ASYNC = 1 << 2//异步日志模式
 	};
 
 	enum LogLevel
@@ -51,6 +61,7 @@ namespace kkem
 		N_Level
 	};
 
+
 	class CustomLevelFormatterFlag;
 	class CustomRotatingFileSink;
 
@@ -61,7 +72,7 @@ namespace kkem
 		struct LogStream : public std::ostringstream
 		{
 		public:
-			LogStream(const spdlog::source_loc& loc, kkem::LogLevel lvl) : _loc(loc), _lvl(lvl) { }
+			LogStream(const spdlog::source_loc& loc, LogLevel lvl) : _loc(loc), _lvl(lvl) { }
 
 			~LogStream() { flush(); }
 
@@ -69,23 +80,26 @@ namespace kkem
 
 		private:
 			spdlog::source_loc _loc;
-			kkem::LogLevel _lvl;
+			LogLevel _lvl;
 		};
 
 		struct LogStream_ : public std::ostringstream
 		{
 		public:
-			LogStream_(const std::string logger, const spdlog::source_loc& loc, kkem::LogLevel lvl) : _logger(logger),
-				_loc(loc), _lvl(lvl) { }
+			LogStream_(const std::string logger, const spdlog::source_loc& loc,
+			           LogLevel lvl) : _logger(logger), _loc(loc), _lvl(lvl) { }
 
 			~LogStream_() { flush_(); }
 
-			void flush_() { Logger::Get().log_(_logger, _loc, _lvl, str().c_str()); }
+			void flush_()
+			{
+				Logger::Get().log_(_logger, _loc, _lvl, str().c_str());
+			}
 
 		private:
 			std::string _logger;
 			spdlog::source_loc _loc;
-			kkem::LogLevel _lvl;
+			LogLevel _lvl;
 		};
 
 	public:
@@ -100,83 +114,74 @@ namespace kkem
 
 		///spdlog输出
 		template <typename... Args>
-		void log(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, const Args&... args);
+		void log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt, const Args&... args);
 
 		///传统printf输出
-		void printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, ...);
+		void printf(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt, ...);
 
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
-		void fmt_printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
-			const Args&... args);
+		void fmt_printf(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
+		                const Args&... args);
 
 		/*********Exlog**********/
 		///spdlog输出
 		template <typename... Args>
-		void log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
-			const Args&... args);
+		void log_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
+		          const char* fmt, const Args&... args);
 
 		///传统printf输出
-		void printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
-			...);
+		void printf_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
+		             const char* fmt, ...);
 
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
-		void fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
-			const Args&... args);
+		void fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
+		                 const char* fmt, const Args&... args);
 
 		///设置输出级别
-		void set_level(kkem::LogLevel lvl);
-		void set_level_(const std::string& logger, kkem::LogLevel lvl);
+		void set_level(LogLevel lvl);
+
+		void set_level_(const std::string& logger, LogLevel lvl);
 
 		///设置刷新达到指定级别时自动刷新缓冲区
-		void set_flush_on(kkem::LogLevel lvl) { spdlog::flush_on(static_cast<spdlog::level::level_enum>(lvl)); }
+		void set_flush_on(LogLevel lvl)
+		{
+			spdlog::flush_on(static_cast<spdlog::level::level_enum>(lvl));
+		}
 
 		/**
 		 * \brief 初始化日志
 		 * \param logPath 日志路径：默认"logs/test.log"
-		 * \param mode STDOUT:控制台 FILEOUT:文件 ASYNC:异步模式
+		 * \param mode STDOUT:控制台 FILE:文件 ASYNC:异步模式
 		 * \param threadCount 异步模式线程池线程数量
 		 * \param logBufferSize 异步模式下日志缓冲区大小
 		 * \return true:success  false:failed
 		 */
-		bool init(const std::string& logPath = LOG_PATH, int mode = STDOUT, std::size_t threadCount = 1,
-			std::size_t logBufferSize = 32 * 1024);
+		bool init(const std::string& logPath = LOG_PATH, const uint32_t mode   = STDOUT,
+		          const uint32_t threadCount = 1, const uint32_t logBufferSize = 32 * 1024);
 
 		/**
 		 * \brief 添加额外日志（多用于临时调试）
 		 * \param logPath 日志路径：需要避免 额外日志名称 与 主日志名称 重复
-		 * \param mode STDOUT:控制台 FILEOUT:文件 ASYNC:异步模式
+		 * \param mode STDOUT:控制台 FILE:文件 ASYNC:异步模式
 		 * \return true:success  false:failed
 		 */
-		bool add_ExLog(const std::string& logPath, int mode = STDOUT);
+		bool add_ExLog(const std::string& logPath, const int mode = STDOUT);
 
 	private:
-		Logger() = default;
-		~Logger() = default;
-		Logger(const Logger&) = delete;
+		Logger()                      = default;
+		~Logger()                     = default;
+		Logger(const Logger&)         = delete;
 		void operator=(const Logger&) = delete;
 
 	private:
-		std::atomic_bool _isInited = { false };
+		std::atomic_bool _isInited          = {false};
 		spdlog::level::level_enum _logLevel = spdlog::level::trace;
 		std::stringstream _ss;
 
 		std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> _map_exLog;
 	};
-
-	///自定义FormatterFlag
-	class CustomLevelFormatterFlag : public spdlog::custom_flag_formatter
-	{
-	public:
-		void format(const spdlog::details::log_msg& _log_msg, const std::tm&, spdlog::memory_buf_t& dest) override;
-
-		std::unique_ptr<custom_flag_formatter> clone() const override
-		{
-			return spdlog::details::make_unique<CustomLevelFormatterFlag>();
-		}
-	};
-
 
 	/**
 	 * \brief 自定义sink
@@ -195,10 +200,9 @@ namespace kkem
 		 * \param rotate_on_open 默认true
 		 * \param event_handlers 默认
 		 */
-		CustomRotatingFileSink(spdlog::filename_t log_path,
-			std::size_t max_size,
-			std::size_t max_storage_days,
-			bool rotate_on_open = true, const spdlog::file_event_handlers& event_handlers = {});
+		CustomRotatingFileSink(spdlog::filename_t log_path, std::size_t max_size,
+		                       std::size_t max_storage_days, bool rotate_on_open = true,
+		                       const spdlog::file_event_handlers& event_handlers = {});
 
 	protected:
 		///将日志消息写入到输出目标 
@@ -221,28 +225,43 @@ namespace kkem
 		std::atomic<uint32_t> _max_storage_days;
 		std::size_t _current_size;
 		spdlog::details::file_helper _file_helper;
-		std::experimental::filesystem::path _log_basename;
-		std::experimental::filesystem::path _log_filename;
-		std::experimental::filesystem::path _log_parent_path;
-		std::experimental::filesystem::path _log_path;
+		std::filesystem::path _log_basename;
+		std::filesystem::path _log_filename;
+		std::filesystem::path _log_parent_path;
+		std::filesystem::path _log_path;
+	};
+
+	class CustomLevelFormatterFlag : public spdlog::custom_flag_formatter
+	{
+	public:
+		void format(const spdlog::details::log_msg& _log_msg, const std::tm&,
+		            spdlog::memory_buf_t& dest) override;
+
+		std::unique_ptr<custom_flag_formatter> clone() const override
+		{
+			return spdlog::details::make_unique<CustomLevelFormatterFlag>();
+		}
 	};
 
 
+	///////////////////////////////////////////
 	template <typename... Args>
-	void Logger::log(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, const Args&... args)
+	inline void Logger::log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
+	                        const Args&... args)
 	{
 		spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
 	}
 
 	template <typename... Args>
-	void Logger::fmt_printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, const Args&... args)
+	inline void Logger::fmt_printf(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
+	                               const Args&... args)
 	{
 		log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 	}
 
 	template <typename... Args>
-	void Logger::log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
-		const Args&... args)
+	inline void Logger::log_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
+	                         const char* fmt, const Args&... args)
 	{
 		auto it = _map_exLog.find(logger);
 		if (it != _map_exLog.end()) {
@@ -254,12 +273,13 @@ namespace kkem
 	}
 
 	template <typename... Args>
-	void Logger::fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
-		const char* fmt, const Args&... args)
+	inline void Logger::fmt_printf_(const std::string& logger, const spdlog::source_loc& loc,
+	                                LogLevel lvl, const char* fmt, const Args&... args)
 	{
 		auto it = _map_exLog.find(logger);
 		if (it != _map_exLog.end()) {
-			it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt::sprintf(fmt, args...).c_str());
+			it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl),
+			                fmt::sprintf(fmt, args...).c_str());
 		}
 		else {
 			log(loc, lvl, fmt::sprintf(fmt, args...).c_str());

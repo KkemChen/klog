@@ -1,57 +1,63 @@
 ﻿#include "Log.h"
 
-#include <spdlog/spdlog.h>
-#include <spdlog/async.h>
-#include <spdlog/logger.h>
-#include <spdlog/fmt/fmt.h>
-#include <spdlog/fmt/bundled/printf.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/daily_file_sink.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/msvc_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/common.h>
 
-
+#ifdef _WIN32
 #define xxx(sink_)	sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Trace), "\033[36m");\
-					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Debug), "\033[1;34m");\
-					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Info), "\033[1;32m");\
-					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Warn), "\033[1;33m");\
-					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Error), "\033[1;31m");\
-					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LogLevel::Fatal), "\033[1;35m");
+						static_cast<spdlog::level::level_enum>(LogLevel::Trace), 3);\
+						sink_->set_color(\
+						static_cast<spdlog::level::level_enum>(LogLevel::Debug), 1);\
+						sink_->set_color(\
+						static_cast<spdlog::level::level_enum>(LogLevel::Info), 2);\
+						sink_->set_color(\
+						static_cast<spdlog::level::level_enum>(LogLevel::Warn), 6);\
+						sink_->set_color(\
+						static_cast<spdlog::level::level_enum>(LogLevel::Error), 4);\
+						sink_->set_color(\
+						static_cast<spdlog::level::level_enum>(LogLevel::Fatal), 5);
 
 
-void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log_msg, const std::tm&,
-	spdlog::memory_buf_t& dest) {
-	switch (_log_msg.level) {
-#define xx(level,msg) case level: {\
-				static std::string msg = #msg; \
-					dest.append(msg.data(), msg.data() + msg.size()); \
-					break; }
+#else
+#define xxx(sink_)	sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Trace), "\033[36m");\
+					sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Debug), "\033[1;34m");\
+					sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Info), "\033[1;32m");\
+					sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Warn), "\033[1;33m");\
+					sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Error), "\033[1;31m");\
+					sink_->set_color(\
+					static_cast<spdlog::level::level_enum>(Fatal), "\033[1;35m");
+#endif
 
-	xx(spdlog::level::trace, TRACE)
-	xx(spdlog::level::debug, DEBUG)
-	xx(spdlog::level::info, INFO)
-	xx(spdlog::level::warn, WARN)
-	xx(spdlog::level::err, ERROR)
-	xx(spdlog::level::critical, FATAL)
-#undef xx
-	default: break;
+
+#ifdef _WIN32
+int vasprintf(char** str, const char* format, va_list args)
+{
+	int size = _vscprintf(format, args);
+	if (size < 0) {
+		return -1;
 	}
-}
 
-void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, ...) {
+	*str = new char[size + 1];
+	int result = vsnprintf_s(*str, size + 1, _TRUNCATE, format, args);
+	if (result < 0) {
+		delete[] *str;
+		*str = nullptr;
+		return -1;
+	}
+
+	return result;
+}
+#endif
+
+void kkem::Logger::printf(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt, ...)
+{
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
-		int len = vasprintf(&buf, fmt, al);
+		int len   = vasprintf(&buf, fmt, al);
 		if (len != -1) {
 			thiz->_ss << std::string(buf, len);
 			free(buf);
@@ -67,8 +73,9 @@ void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, con
 	_ss.str("");
 }
 
-void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
-                           const char* fmt, ...) {
+void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc,
+                           LogLevel lvl, const char* fmt, ...)
+{
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
@@ -88,29 +95,32 @@ void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& 
 	_ss.str("");
 }
 
-void kkem::Logger::set_level(kkem::LogLevel lvl) {
+void kkem::Logger::set_level(LogLevel lvl)
+{
 	_logLevel = static_cast<spdlog::level::level_enum>(lvl);
 	spdlog::set_level(_logLevel);
 }
 
-void kkem::Logger::set_level_(const std::string& logger, kkem::LogLevel lvl) {
+void kkem::Logger::set_level_(const std::string& logger, LogLevel lvl)
+{
 	auto it = _map_exLog.find(logger);
 	if (it != _map_exLog.end()) {
 		it->second->set_level(static_cast<spdlog::level::level_enum>(lvl));
 	}
 }
 
-bool kkem::Logger::init(const std::string& logPath, const int mode, const std::size_t threadCount,
-                        const std::size_t logBufferSize)
+/***************/
+bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
+                        const uint32_t threadCount, const uint32_t logBufferSize)
 {
 	if (_isInited) return true;
 	try {
-		namespace fs = std::experimental::filesystem;
-		fs::path log_file_path(logPath);
-		fs::path log_filename = log_file_path.filename();
+		std::filesystem::path log_file_path(logPath);
+		std::filesystem::path log_filename = log_file_path.filename();
 
 		spdlog::filename_t basename, ext;
-		std::tie(basename, ext) = spdlog::details::file_helper::split_by_extension(log_filename.string());
+		std::tie(basename, ext) =
+				spdlog::details::file_helper::split_by_extension(log_filename.string());
 
 		//spdlog::init_thread_pool(log_buffer_size, std::thread::hardware_concurrency());
 		spdlog::init_thread_pool(logBufferSize, threadCount);
@@ -127,47 +137,41 @@ bool kkem::Logger::init(const std::string& logPath, const int mode, const std::s
 
 		//控制台输出
 		if (mode & STDOUT) {
-#if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-			xxx(ms_sink)
-				sinks.push_back(ms_sink);
-#endif //  _DEBUG
-
-#if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
 			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 			xxx(console_sink)
-				sinks.push_back(console_sink);
-#endif
+			sinks.push_back(console_sink);
 		}
 
 		//文件输出
 		if (mode & FILEOUT) {
-			auto rotatingSink = std::make_shared<kkem::CustomRotatingFileSink>(logPath, SINGLE_FILE_MAX_SIZE,
-				MAX_STORAGE_DAYS);
+			auto rotatingSink = std::make_shared<
+				CustomRotatingFileSink>(logPath, SINGLE_FILE_MAX_SIZE, MAX_STORAGE_DAYS);
 			sinks.push_back(rotatingSink);
 		}
 
 		//异步
 		if (mode & ASYNC) {
-			spdlog::set_default_logger(std::make_shared<spdlog::async_logger>(basename, sinks.begin(), sinks.end(),
-				spdlog::thread_pool(), spdlog::async_overflow_policy::block));
+			spdlog::set_default_logger(std::make_shared<spdlog::async_logger>(basename,
+				                           sinks.begin(), sinks.end(),
+				                           spdlog::thread_pool(),
+				                           spdlog::async_overflow_policy::block));
 		}
 		else {
-			spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end()));
+			spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(),
+				                           sinks.end()));
 		}
 
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-			set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+		           set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
 
 		spdlog::set_formatter(std::move(formatter));
 
 		spdlog::flush_every(std::chrono::seconds(5));
 		spdlog::flush_on(spdlog::level::info);
 		spdlog::set_level(_logLevel);
-	}
-	catch (std::exception_ptr e) {
+	} catch (std::exception_ptr e) {
 		assert(false);
 		return false;
 	}
@@ -175,44 +179,36 @@ bool kkem::Logger::init(const std::string& logPath, const int mode, const std::s
 	return true;
 }
 
-bool kkem::Logger::add_ExLog(const std::string& logPath, int mode)
+bool kkem::Logger::add_ExLog(const std::string& logPath, const int mode)
 {
 	try {
-		namespace fs = std::experimental::filesystem;
-		fs::path log_file_path(logPath);
-		fs::path log_filename = log_file_path.filename();
+		std::filesystem::path log_file_path(logPath);
+		std::filesystem::path log_filename = log_file_path.filename();
 
 		spdlog::filename_t basename, ext;
-		std::tie(basename, ext) = spdlog::details::file_helper::split_by_extension(log_filename.string());
+		std::tie(basename, ext) =
+				spdlog::details::file_helper::split_by_extension(log_filename.string());
 
 		std::vector<spdlog::sink_ptr> sinks;
 
 		//控制台输出
 		if (mode & STDOUT) {
-#if defined(_DEBUG) && defined(WIN32) && !defined(NO_CONSOLE_LOG)
-			auto ms_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
-			xxx(ms_sink)
-				sinks.push_back(ms_sink);
-#endif //  _DEBUG
-
-#if !defined(WIN32) && !defined(NO_CONSOLE_LOG)
 			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 			xxx(console_sink)
-				sinks.push_back(console_sink);
-#endif
+			sinks.push_back(console_sink);
 		}
 		//文件输出
 		if (mode & FILEOUT) {
-			auto rotatingSink = std::make_shared<kkem::CustomRotatingFileSink>(logPath, SINGLE_FILE_MAX_SIZE,
-				MAX_STORAGE_DAYS);
+			auto rotatingSink = std::make_shared<
+				CustomRotatingFileSink>(logPath, SINGLE_FILE_MAX_SIZE, MAX_STORAGE_DAYS);
 			sinks.push_back(rotatingSink);
 		}
 
-		std::shared_ptr < spdlog::logger > exLog;
+		std::shared_ptr<spdlog::logger> exLog;
 		if (mode & ASYNC) {
 			exLog = std::make_shared<spdlog::async_logger>(basename, sinks.begin(), sinks.end(),
-				spdlog::thread_pool(),
-				spdlog::async_overflow_policy::block);
+			                                               spdlog::thread_pool(),
+			                                               spdlog::async_overflow_policy::block);
 		}
 		else {
 			exLog = std::make_shared<spdlog::logger>(basename, sinks.begin(), sinks.end());
@@ -221,14 +217,13 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, int mode)
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-			set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+		           set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
 
 		exLog->set_formatter(std::move(formatter));
 		exLog->flush_on(spdlog::level::trace);
 		exLog->set_level(spdlog::level::trace);
 		_map_exLog.emplace(basename, exLog);
-	}
-	catch (std::exception_ptr e) {
+	} catch (std::exception_ptr e) {
 		assert(false);
 		return false;
 	}
@@ -237,12 +232,11 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, int mode)
 
 kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path,
                                                             std::size_t max_size,
-                                                            std::size_t max_storage_days, bool rotate_on_open,
-                                                            const spdlog::file_event_handlers& event_handlers)
-	: _log_path(log_path)
-	, _max_size(max_size)
-	, _max_storage_days(max_storage_days)
-	, _file_helper{ event_handlers }
+                                                            std::size_t max_storage_days,
+                                                            bool rotate_on_open,
+                                                            const spdlog::file_event_handlers&
+                                                            event_handlers) : _log_path(log_path),
+                                                                              _max_size(max_size), _max_storage_days(max_storage_days), _file_helper{ event_handlers }
 {
 	if (max_size == 0) {
 		spdlog::throw_spdlog_ex("rotating sink constructor: max_size arg cannot be zero");
@@ -256,7 +250,8 @@ kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path
 	_log_filename = _log_path.filename();
 
 	spdlog::filename_t basename, ext;
-	std::tie(basename, ext) = spdlog::details::file_helper::split_by_extension(_log_filename.string());
+	std::tie(basename, ext) =
+		spdlog::details::file_helper::split_by_extension(_log_filename.string());
 
 	_log_basename = basename;
 
@@ -278,12 +273,12 @@ spdlog::filename_t kkem::CustomRotatingFileSink::calc_filename()
 	std::tm tm = *std::localtime(&time);
 
 	return _log_parent_path.empty()
-		? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log", tm, _log_basename.string(), tm)
-		: spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d-%H:%M:%S}.log",
-			_log_parent_path.string(),
-			tm,
-			_log_basename.string(),
-			tm);/// logs/yyyy-mm-dd/test_yyyy-mm-dd-h-m-s.log
+		? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log", tm,
+			_log_basename.string(), tm)
+		: spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log",
+			_log_parent_path.string(), tm, _log_basename.string(),
+			tm);
+	/// logs/yyyy-mm-dd/basename_yyyy-mm-dd_h-m-s.log
 }
 
 spdlog::filename_t kkem::CustomRotatingFileSink::filename()
@@ -322,13 +317,11 @@ void kkem::CustomRotatingFileSink::rotate_()
 
 void kkem::CustomRotatingFileSink::cleanup_file_()
 {
-	namespace fs = std::experimental::filesystem;
-
 	const std::regex folder_regex(R"(\d{4}-\d{2}-\d{2})");
 	//const std::chrono::hours max_age();
 
-	for (auto& p : fs::directory_iterator(_log_parent_path)) {
-		if (fs::is_directory(p)) {
+	for (auto& p : std::filesystem::directory_iterator(_log_parent_path)) {
+		if (std::filesystem::is_directory(p)) {
 			const std::string folder_name = p.path().filename().string();
 			if (std::regex_match(folder_name, folder_regex)) {
 				const int year = std::stoi(folder_name.substr(0, 4));
@@ -338,20 +331,45 @@ void kkem::CustomRotatingFileSink::cleanup_file_()
 				std::tm date1_tm{ 0, 0, 0, day, mon - 1, year - 1900 };
 				const std::time_t date_tt = std::mktime(&date1_tm);
 
-				const std::chrono::system_clock::time_point time = std::chrono::system_clock::from_time_t(date_tt);
+				const std::chrono::system_clock::time_point time =
+					std::chrono::system_clock::from_time_t(date_tt);
 
-				const std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+				const std::chrono::system_clock::time_point now =
+					std::chrono::system_clock::now();
 
 				const std::chrono::duration<double> duration = now - time;
 
-				const double days = duration.count() / (24 * 60 * 60);// 将时间差转换为天数
+				const double days = duration.count() / (24 * 60 * 60);
+				// 将时间差转换为天数
 
 				if (days > _max_storage_days) {
-					fs::remove_all(p);
-					std::cout << "Clean up log files older than" << _max_storage_days << " days" << std::endl;
+					std::filesystem::remove_all(p);
+					std::cout << "Clean up log files older than" << _max_storage_days << " days"
+						<< std::endl;
 				}
 			}
 		}
+	}
+}
+
+void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log_msg,
+	const std::tm&, spdlog::memory_buf_t& dest) {
+	switch (_log_msg.level) {
+#undef DEBUG
+#undef ERROR
+#define xx(level,msg) case level: {\
+				static std::string msg = #msg; \
+					dest.append(msg.data(), msg.data() + msg.size()); \
+					break; }
+
+	xx(spdlog::level::trace, TRACE)
+	xx(spdlog::level::debug, DEBUG)
+	xx(spdlog::level::info, INFO)
+	xx(spdlog::level::warn, WARN)
+	xx(spdlog::level::err, ERROR)
+	xx(spdlog::level::critical, FATAL)
+#undef xx
+	default: break;
 	}
 }
 
