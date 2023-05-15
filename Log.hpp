@@ -38,37 +38,37 @@ namespace kkem
 	constexpr std::size_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
 	constexpr std::size_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
 
-	enum LOG_MODE
+	enum LogMode
 	{
 		STDOUT = 1 << 0,	//主日志控制台输出
 		FILEOUT = 1 << 1,	//主日志文件输出
 		ASYNC = 1 << 2		//异步日志模式
 	};
 
-	enum LOG_LEVEL
+	enum LogLevel
 	{
-		TRACE = 0,
-		DEBUG = 1,
-		INFO = 2,
-		WARN = 3,
-		ERROR = 4,
-		FATAL = 5,
-		OFF = 6,
-		N_LEVEL
+		Trace = 0,
+		Debug = 1,
+		Info = 2,
+		Warn = 3,
+		Error = 4,
+		Fatal = 5,
+		Off = 6,
+		N_Level
 	};
 
 #define xxx(sink_)	sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::TRACE), "\033[36m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Trace), "\033[36m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::DEBUG), "\033[1;34m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Debug), "\033[1;34m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::INFO), "\033[1;32m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Info), "\033[1;32m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::WARN), "\033[1;33m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Warn), "\033[1;33m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::ERROR), "\033[1;31m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Error), "\033[1;31m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::FATAL), "\033[1;35m");
+					static_cast<spdlog::level::level_enum>(LogLevel::Fatal), "\033[1;35m");
 
 
 	class CustomLevelFormatterFlag;
@@ -81,7 +81,7 @@ namespace kkem
 		struct LogStream : public std::ostringstream
 		{
 		public:
-			LogStream(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl) : _loc(loc), _lvl(lvl) { }
+			LogStream(const spdlog::source_loc& loc, kkem::LogLevel lvl) : _loc(loc), _lvl(lvl) { }
 
 			~LogStream() { flush(); }
 
@@ -89,13 +89,13 @@ namespace kkem
 
 		private:
 			spdlog::source_loc _loc;
-			kkem::LOG_LEVEL _lvl;
+			kkem::LogLevel _lvl;
 		};
 
 		struct LogStream_ : public std::ostringstream
 		{
 		public:
-			LogStream_(const std::string logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl) : _logger(logger),
+			LogStream_(const std::string logger, const spdlog::source_loc& loc, kkem::LogLevel lvl) : _logger(logger),
 				_loc(loc), _lvl(lvl) { }
 
 			~LogStream_() { flush_(); }
@@ -105,7 +105,7 @@ namespace kkem
 		private:
 			std::string _logger;
 			spdlog::source_loc _loc;
-			kkem::LOG_LEVEL _lvl;
+			kkem::LogLevel _lvl;
 		};
 
 	public:
@@ -120,39 +120,39 @@ namespace kkem
 
 		///spdlog输出
 		template <typename... Args>
-		void log(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt, const Args&... args);
+		void log(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, const Args&... args);
 
 		///传统printf输出
-		void printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt, ...);
+		void printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, ...);
 
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
-		void fmt_printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt,
+		void fmt_printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
 		                const Args&... args);
 
 		/*********Exlog**********/
 		///spdlog输出
 		template <typename... Args>
-		void log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt,
+		void log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
 		          const Args&... args);
 
 		///传统printf输出
-		void printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt,
+		void printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
 		             ...);
 
 		///fmt的printf输出（不支持格式化非void类型指针）
 		template <typename... Args>
-		void fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt,
+		void fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
 		                 const Args&... args);
 
 		///设置输出级别
-		void set_level(kkem::LOG_LEVEL lvl)
+		void set_level(kkem::LogLevel lvl)
 		{
 			_logLevel = static_cast<spdlog::level::level_enum>(lvl);
 			spdlog::set_level(_logLevel);
 		}
 
-		void set_level_(const std::string& logger, kkem::LOG_LEVEL lvl)
+		void set_level_(const std::string& logger, kkem::LogLevel lvl)
 		{
 			auto it = _map_exLog.find(logger);
 			if (it != _map_exLog.end()) {
@@ -161,7 +161,7 @@ namespace kkem
 		}
 
 		///设置刷新达到指定级别时自动刷新缓冲区
-		void set_flush_on(kkem::LOG_LEVEL lvl) { spdlog::flush_on(static_cast<spdlog::level::level_enum>(lvl)); }
+		void set_flush_on(kkem::LogLevel lvl) { spdlog::flush_on(static_cast<spdlog::level::level_enum>(lvl)); }
 
 		/**
 		 * \brief 初始化日志
@@ -197,12 +197,12 @@ namespace kkem
 	};
 
 	template <typename... Args>
-	inline void Logger::log(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt, const Args&... args)
+	inline void Logger::log(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, const Args&... args)
 	{
 		spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
 	}
 
-	inline void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt, ...)
+	inline void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, ...)
 	{
 		auto fun = [](void* self, const char* fmt, va_list al) {
 			auto thiz = static_cast<Logger*>(self);
@@ -224,14 +224,14 @@ namespace kkem
 	}
 
 	template <typename... Args>
-	inline void Logger::fmt_printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt,
+	inline void Logger::fmt_printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt,
 	                               const Args&... args)
 	{
 		log(loc, lvl, fmt::sprintf(fmt, args...).c_str());
 	}
 
 	template <typename... Args>
-	inline void Logger::log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl,
+	inline void Logger::log_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
 	                         const char* fmt,
 	                         const Args&... args)
 	{
@@ -245,7 +245,7 @@ namespace kkem
 	}
 
 	template <typename... Args>
-	inline void Logger::fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl,
+	inline void Logger::fmt_printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
 	                                const char* fmt, const Args&... args)
 	{
 		auto it = _map_exLog.find(logger);
@@ -257,7 +257,7 @@ namespace kkem
 		}
 	}
 
-	inline void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl,
+	inline void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
 	                                  const char* fmt, ...)
 	{
 		auto fun = [](void* self, const char* fmt, va_list al) {
@@ -618,67 +618,67 @@ namespace kkem
 }// namespace kkem
 
 
-#	define 	 log_trace(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define	 LOG_TRACE(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define 	 logtrace(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define	 LOGTRACE() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE)
+#	define 	 log_trace(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define	 LOG_TRACE(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define 	 logtrace(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define	 LOGTRACE() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace)
 
-#	define 	 log_trace_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define	 LOG_TRACE_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define 	 logtrace_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE, fmt, ##__VA_ARGS__)
-#	define	 LOGTRACE_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::TRACE)
-
-
-#	define 	 log_debug(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define	 LOG_DEBUG(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define 	 logdebug(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define	 LOGDEBUG() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG)
-
-#	define 	 log_debug_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define	 LOG_DEBUG_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define 	 logdebug_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG, fmt, ##__VA_ARGS__)
-#	define	 LOGDEBUG_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::DEBUG)
+#	define 	 log_trace_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define	 LOG_TRACE_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define 	 logtrace_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#	define	 LOGTRACE_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Trace)
 
 
-#	define 	 log_info(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define	 LOG_INFO(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define 	 loginfo(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define	 LOGINFO() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO)
+#	define 	 log_debug(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define	 LOG_DEBUG(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define 	 logdebug(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define	 LOGDEBUG() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug)
 
-#	define 	 log_info_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define	 LOG_INFO_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define 	 loginfo_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO, fmt, ##__VA_ARGS__)
-#	define	 LOGINFO_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::INFO)
-
-
-#	define 	 log_warn(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define	 LOG_WARN(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define 	 logwarn(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define	 LOGWARN() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN)
-
-#	define 	 log_warn_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define	 LOG_WARN_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define 	 logwarn_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN, fmt, ##__VA_ARGS__)
-#	define	 LOGWARN_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::WARN)
+#	define 	 log_debug_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define	 LOG_DEBUG_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define 	 logdebug_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#	define	 LOGDEBUG_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Debug)
 
 
-#	define 	 log_err(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define	 LOG_ERR(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define 	 logerr(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define	 LOGERR() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR)
+#	define 	 log_info(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define	 LOG_INFO(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define 	 loginfo(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define	 LOGINFO() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info)
 
-#	define 	 log_err_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define	 LOG_ERR_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define 	 logerr_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR, fmt, ##__VA_ARGS__)
-#	define	 LOGERR_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::ERROR)
+#	define 	 log_info_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define	 LOG_INFO_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define 	 loginfo_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info, fmt, ##__VA_ARGS__)
+#	define	 LOGINFO_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Info)
 
 
-#	define 	 log_fatal(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define	 LOG_FATAL(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define 	 logfatal(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define	 LOGFATAL() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL)
+#	define 	 log_warn(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define	 LOG_WARN(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define 	 logwarn(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define	 LOGWARN() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn)
 
-#	define 	 log_fatal_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define	 LOG_FATAL_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define 	 logfatal_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL, fmt, ##__VA_ARGS__)
-#	define	 LOGFATAL_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LOG_LEVEL::FATAL)
+#	define 	 log_warn_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define	 LOG_WARN_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define 	 logwarn_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#	define	 LOGWARN_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Warn)
+
+
+#	define 	 log_err(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define	 LOG_ERR(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define 	 logerr(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define	 LOGERR() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error)
+
+#	define 	 log_err_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define	 LOG_ERR_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define 	 logerr_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error, fmt, ##__VA_ARGS__)
+#	define	 LOGERR_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Error)
+
+
+#	define 	 log_fatal(fmt,...) 		kkem::Logger::Get().fmt_printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define	 LOG_FATAL(fmt, ...) 		kkem::Logger::Get().log({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define 	 logfatal(fmt,...) 		kkem::Logger::Get().printf({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define	 LOGFATAL() 			kkem::Logger::LogStream({__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal)
+
+#	define 	 log_fatal_(logger,fmt,...) 		kkem::Logger::Get().fmt_printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define	 LOG_FATAL_(logger,fmt, ...) 		kkem::Logger::Get().log_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define 	 logfatal_(logger,fmt,...) 		kkem::Logger::Get().printf_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal, fmt, ##__VA_ARGS__)
+#	define	 LOGFATAL_(logger) 			kkem::Logger::LogStream_(logger,{__FILE__, __LINE__, __FUNCTION__}, kkem::LogLevel::Fatal)

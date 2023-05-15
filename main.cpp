@@ -7,11 +7,11 @@ int main(int argc, char *argv[])
 {
 	int ret = 22;
 	kkem::Logger::Get().init("logs/stream.log",kkem::STDOUT | kkem::FILEOUT | kkem::ASYNC);
-	kkem::Logger::Get().set_level(kkem::LOG_LEVEL::TRACE);
+	kkem::Logger::Get().set_level(kkem::LogLevel::TRACE);
 
 
 	kkem::Logger::Get().add_ExLog("logs/EX_stream.log", kkem::STDOUT | kkem::FILEOUT | kkem::ASYNC);
-	kkem::Logger::Get().set_level_("EX_stream", kkem::LOG_LEVEL::OFF);
+	kkem::Logger::Get().set_level_("EX_stream", kkem::LogLevel::OFF);
 
 
 	LOGTRACE() << "test" << 6666;
