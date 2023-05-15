@@ -32,6 +32,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/common.h>
+#include <spdlog/pattern_formatter.h>
 
 
 namespace kkem
