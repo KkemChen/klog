@@ -19,6 +19,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/common.h>
+#include <spdlog/pattern_formatter.h>
   
 // 检查 C++ 标准版本是否为 C++17 或更高版本
 #if __cplusplus >= 201703L
