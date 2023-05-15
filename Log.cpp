@@ -15,17 +15,17 @@
 
 
 #define xxx(sink_)	sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::TRACE), "\033[36m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Trace), "\033[36m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::DEBUG), "\033[1;34m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Debug), "\033[1;34m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::INFO), "\033[1;32m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Info), "\033[1;32m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::WARN), "\033[1;33m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Warn), "\033[1;33m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::ERROR), "\033[1;31m");\
+					static_cast<spdlog::level::level_enum>(LogLevel::Error), "\033[1;31m");\
 					sink_->set_color(\
-					static_cast<spdlog::level::level_enum>(LOG_LEVEL::FATAL), "\033[1;35m");
+					static_cast<spdlog::level::level_enum>(LogLevel::Fatal), "\033[1;35m");
 
 
 void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log_msg, const std::tm&,
@@ -47,7 +47,7 @@ void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log
 	}
 }
 
-void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, const char* fmt, ...) {
+void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LogLevel lvl, const char* fmt, ...) {
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
@@ -67,8 +67,8 @@ void kkem::Logger::printf(const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl, co
 	_ss.str("");
 }
 
-void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LOG_LEVEL lvl,
-	const char* fmt, ...) {
+void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& loc, kkem::LogLevel lvl,
+                           const char* fmt, ...) {
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
@@ -88,12 +88,12 @@ void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& 
 	_ss.str("");
 }
 
-void kkem::Logger::set_level(kkem::LOG_LEVEL lvl) {
+void kkem::Logger::set_level(kkem::LogLevel lvl) {
 	_logLevel = static_cast<spdlog::level::level_enum>(lvl);
 	spdlog::set_level(_logLevel);
 }
 
-void kkem::Logger::set_level_(const std::string& logger, kkem::LOG_LEVEL lvl) {
+void kkem::Logger::set_level_(const std::string& logger, kkem::LogLevel lvl) {
 	auto it = _map_exLog.find(logger);
 	if (it != _map_exLog.end()) {
 		it->second->set_level(static_cast<spdlog::level::level_enum>(lvl));
