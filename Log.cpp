@@ -164,7 +164,7 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-		           set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+		           set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [<%!> %s:%#]: %v%$");
 
 		spdlog::set_formatter(std::move(formatter));
 
@@ -217,7 +217,7 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, const int mode)
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-		           set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [%s:%# (%!)]: %v%$");
+		           set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [<%!> %s:%#]: %v%$");
 
 		exLog->set_formatter(std::move(formatter));
 		exLog->flush_on(spdlog::level::trace);
