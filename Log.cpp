@@ -1,5 +1,6 @@
 ﻿#include "Log.h"
 
+thread_local std::stringstream kkem::Logger::_ss;
 
 #ifdef _WIN32
 #define xxx(sink_)	sink_->set_color(\
