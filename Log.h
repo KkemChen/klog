@@ -179,11 +179,13 @@ namespace kkem
 	private:
 		std::atomic_bool _isInited          = {false};
 		spdlog::level::level_enum _logLevel = spdlog::level::trace;
-		std::stringstream _ss;
+		static thread_local std::stringstream _ss;
 
 		std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> _map_exLog;
 	};
 
+	thread_local std::stringstream kkem::Logger::_ss;
+	
 	/**
 	 * \brief 自定义sink
 	 *	1.按文件大小分片存储
