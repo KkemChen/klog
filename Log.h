@@ -184,8 +184,6 @@ namespace kkem
 		std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> _map_exLog;
 	};
 
-	thread_local std::stringstream kkem::Logger::_ss;
-	
 	/**
 	 * \brief 自定义sink
 	 *	1.按文件大小分片存储
