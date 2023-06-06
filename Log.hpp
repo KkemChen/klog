@@ -44,6 +44,7 @@ namespace kkem
 	constexpr uint32_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
 	constexpr uint32_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
 
+	extern thread_local std::stringstream _ss;
 	enum LogMode
 	{
 		STDOUT = 1 << 0,
@@ -220,13 +221,12 @@ namespace kkem
 	private:
 		std::atomic_bool _isInited = {false};
 		spdlog::level::level_enum _logLevel = spdlog::level::trace;
-		static thread_local std::stringstream _ss;
+		
 
 		std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> _map_exLog;
 	};
 	
-	thread_local std::stringstream kkem::Logger::_ss;
-	
+
 	template <typename... Args>
 	inline void Logger::log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
 	                        const Args&... args)
@@ -260,7 +260,7 @@ namespace kkem
 			char* buf = nullptr;
 			int len   = vasprintf(&buf, fmt, al);
 			if (len != -1) {
-				thiz->_ss << std::string(buf, len);
+				_ss << std::string(buf, len);
 				free(buf);
 			}
 		};
@@ -316,7 +316,7 @@ namespace kkem
 			char* buf = nullptr;
 			int len   = vasprintf(&buf, fmt, al);
 			if (len != -1) {
-				thiz->_ss << std::string(buf, len);
+				_ss << std::string(buf, len);
 				free(buf);
 			}
 		};
@@ -369,9 +369,13 @@ namespace kkem
 		///清理过期日志文件 
 		void cleanup_file_();
 
+		///是否到达每日轮转时间点
+		bool is_daily_rotate_tp_();
+
 		std::atomic<uint32_t> _max_size;
 		std::atomic<uint32_t> _max_storage_days;
 		std::size_t _current_size;
+		std::atomic<int> _last_rotate_day;
 		spdlog::details::file_helper _file_helper;
 		std::filesystem::path _log_basename;
 		std::filesystem::path _log_filename;
@@ -564,7 +568,7 @@ namespace kkem
 		base_sink<std::mutex>::formatter_->format(msg, formatted);
 		auto new_size = _current_size + formatted.size();
 
-		if (new_size > _max_size) {
+		if (new_size > _max_size || is_daily_rotate_tp_()) {
 			_file_helper.flush();
 			if (_file_helper.size() > 0) {
 				rotate_();
@@ -621,6 +625,17 @@ namespace kkem
 				}
 			}
 		}
+	}
+
+	inline bool CustomRotatingFileSink::is_daily_rotate_tp_()
+	{
+		auto now = std::chrono::system_clock::now();
+		std::time_t time = std::chrono::system_clock::to_time_t(now);
+		std::tm tm = *std::localtime(&time);
+
+		if (tm.tm_mday != _last_rotate_day) return true;
+
+		return false;
 	}
 
 
