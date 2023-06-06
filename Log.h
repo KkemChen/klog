@@ -3,13 +3,12 @@
 // 检查 C++ 标准版本是否为 C++17 或更高版本
 #if __cplusplus < 201703L || _MSVC_LANG < 201703L
 #if defined(_WIN32) && _MSC_VER >= 1910
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+	#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #endif
 #include <experimental/filesystem>
 
-namespace std
-{
-namespace filesystem = experimental::filesystem;
+namespace std{
+	namespace filesystem = experimental::filesystem;
 }
 #else
 #include <filesystem>
