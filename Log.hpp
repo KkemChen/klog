@@ -27,12 +27,11 @@
 #elif defined(_MSC_VER) && _MSC_VER >= 1910 && _MSVC_LANG >= 201703L
     #include <filesystem>
 #else
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+	#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
 
-namespace std
-{
-namespace filesystem = experimental::filesystem;
+namespace std{
+	namespace filesystem = experimental::filesystem;
 }
 #endif
 
