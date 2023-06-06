@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // 检查 C++ 标准版本是否为 C++17 或更高版本
 #if __cplusplus < 201703L || _MSVC_LANG < 201703L
@@ -39,15 +39,13 @@ namespace kkem
 {
 	constexpr const char* LOG_PATH          = "logs/test.log"; //默认日志存储路径
 	constexpr uint32_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
-	constexpr uint32_t MAX_STORAGE_DAYS     = 1;               //日志保存时间(天)
+	constexpr uint32_t MAX_STORAGE_DAYS     = 5;               //日志保存时间(天)
 
 	enum LogMode
 	{
-		STDOUT = 1 << 0,
-		//主日志控制台输出
-		FILEOUT = 1 << 1,
-		//主日志文件输出
-		ASYNC = 1 << 2//异步日志模式
+		STDOUT = 1 << 0,	//主日志控制台输出
+		FILEOUT = 1 << 1,	//主日志文件输出
+		ASYNC = 1 << 2		//异步日志模式
 	};
 
 	enum LogLevel
@@ -222,9 +220,13 @@ namespace kkem
 		///清理过期日志文件 
 		void cleanup_file_();
 
+		///是否到达每日轮转时间点
+		bool is_daily_rotate_tp_();
+
 		std::atomic<uint32_t> _max_size;
 		std::atomic<uint32_t> _max_storage_days;
 		std::size_t _current_size;
+		std::atomic<int> _last_rotate_day;
 		spdlog::details::file_helper _file_helper;
 		std::filesystem::path _log_basename;
 		std::filesystem::path _log_filename;

@@ -165,7 +165,7 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-		           set_pattern("%^[%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [<%!> %s:%#]: %v%$");
+		           set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%*]%$ |%t| [<%!> %s:%#]: %v");
 
 		spdlog::set_formatter(std::move(formatter));
 
@@ -218,7 +218,7 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, const int mode)
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
 
 		formatter->add_flag<CustomLevelFormatterFlag>('*').
-		           set_pattern("%^[%n][%Y-%m-%d %H:%M:%S.%e] [%*] |%t| [<%!> %s:%#]: %v%$");
+		           set_pattern("[%n][%Y-%m-%d %H:%M:%S.%e] %^[%*]%$ |%t| [<%!> %s:%#]: %v");
 
 		exLog->set_formatter(std::move(formatter));
 		exLog->flush_on(spdlog::level::trace);
@@ -294,19 +294,26 @@ void kkem::CustomRotatingFileSink::sink_it_(const spdlog::details::log_msg& msg)
 	base_sink<std::mutex>::formatter_->format(msg, formatted);
 	auto new_size = _current_size + formatted.size();
 
-	if (new_size > _max_size) {
+	if (new_size > _max_size || is_daily_rotate_tp_()) {
 		_file_helper.flush();
 		if (_file_helper.size() > 0) {
 			rotate_();
 			new_size = formatted.size();
 		}
 	}
+
 	_file_helper.write(formatted);
 	_current_size = new_size;
 }
 
 void kkem::CustomRotatingFileSink::rotate_()
 {
+	auto now = std::chrono::system_clock::now();
+	std::time_t time = std::chrono::system_clock::to_time_t(now);
+	std::tm tm = *std::localtime(&time);
+
+	_last_rotate_day = tm.tm_mday;
+
 	_file_helper.close();
 
 	cleanup_file_();
@@ -353,8 +360,20 @@ void kkem::CustomRotatingFileSink::cleanup_file_()
 	}
 }
 
+bool kkem::CustomRotatingFileSink::is_daily_rotate_tp_()
+{
+	auto now = std::chrono::system_clock::now();
+	std::time_t time = std::chrono::system_clock::to_time_t(now);
+	std::tm tm = *std::localtime(&time);
+
+	if (tm.tm_mday != _last_rotate_day) return true;
+
+	return false;
+
+}
+
 void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log_msg,
-	const std::tm&, spdlog::memory_buf_t& dest) {
+                                            const std::tm&, spdlog::memory_buf_t& dest) {
 	switch (_log_msg.level) {
 #undef DEBUG
 #undef ERROR
