@@ -20,20 +20,9 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/common.h>
 #include <spdlog/pattern_formatter.h>
+#include <filesystem>
 
-// 检查 C++ 标准版本是否为 C++17 或更高版本
-#if __cplusplus >= 201703L
-    #include <filesystem>
-#elif defined(_MSC_VER) && _MSC_VER >= 1910 && _MSVC_LANG >= 201703L
-    #include <filesystem>
-#else
-	#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#include <experimental/filesystem>
 
-namespace std{
-	namespace filesystem = experimental::filesystem;
-}
-#endif
 
 
 namespace kkem
@@ -146,7 +135,7 @@ public:
 
 	///spdlog输出
 	template <typename... Args>
-	void log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt, const Args&... args);
+	void log(const spdlog::source_loc& loc, LogLevel lvl, std::string_view fmt, const Args&... args);
 
 	///传统printf输出
 	void printf(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt, ...);
@@ -160,7 +149,7 @@ public:
 	///spdlog输出
 	template <typename... Args>
 	void log_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
-	          const char* fmt, const Args&... args);
+	          std::string_view fmt, const Args&... args);
 
 	///传统printf输出
 	void printf_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
@@ -227,10 +216,10 @@ private:
 
 
 template <typename... Args>
-inline void Logger::log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
+inline void Logger::log(const spdlog::source_loc& loc, LogLevel lvl, std::string_view fmt,
                         const Args&... args)
 {
-	spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
+	spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt::runtime(fmt), args...);
 }
 
 #ifdef _WIN32
@@ -283,11 +272,11 @@ inline void Logger::fmt_printf(const spdlog::source_loc& loc, LogLevel lvl, cons
 
 template <typename... Args>
 inline void Logger::log_(const std::string& logger, const spdlog::source_loc& loc, LogLevel lvl,
-                         const char* fmt, const Args&... args)
+                         std::string_view fmt, const Args&... args)
 {
 	auto it = _map_exLog.find(logger);
 	if (it != _map_exLog.end()) {
-		it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
+		it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt::runtime(fmt), args...);
 	}
 	else {
 		log(loc, lvl, fmt, args...);
