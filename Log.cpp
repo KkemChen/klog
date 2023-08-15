@@ -1,7 +1,10 @@
-﻿#include "Log.h"
-
+#include "Log.h"
+#include <csignal>
+#include <execinfo.h>
+#include <unistd.h>
+#include <cstdlib>
 thread_local std::stringstream kkem::Logger::_ss;
-
+static uint32_t s_backtraceDepth = 0;
 #ifdef _WIN32
 #define xxx(sink_)	sink_->set_color(\
 						static_cast<spdlog::level::level_enum>(LogLevel::Trace), 3);\
@@ -58,7 +61,7 @@ void kkem::Logger::printf(const spdlog::source_loc& loc, LogLevel lvl, const cha
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
-		int len = vasprintf(&buf, fmt, al);
+		int len   = vasprintf(&buf, fmt, al);
 		if (len != -1) {
 			thiz->_ss << std::string(buf, len);
 			free(buf);
@@ -80,7 +83,7 @@ void kkem::Logger::printf_(const std::string& logger, const spdlog::source_loc& 
 	auto fun = [](void* self, const char* fmt, va_list al) {
 		auto thiz = static_cast<Logger*>(self);
 		char* buf = nullptr;
-		int len = vasprintf(&buf, fmt, al);
+		int len   = vasprintf(&buf, fmt, al);
 		if (len != -1) {
 			thiz->_ss << std::string(buf, len);
 			free(buf);
@@ -112,7 +115,7 @@ void kkem::Logger::set_level_(const std::string& logger, LogLevel lvl)
 
 /***************/
 bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
-                        const uint32_t threadCount, const uint32_t logBufferSize)
+                        const uint32_t threadCount, const uint32_t backtrackDepth,const uint32_t logBufferSize)
 {
 	if (_isInited) return true;
 	try {
@@ -153,13 +156,13 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 		//异步
 		if (mode & ASYNC) {
 			spdlog::set_default_logger(std::make_shared<spdlog::async_logger>(basename,
-			                                                                  sinks.begin(), sinks.end(),
-			                                                                  spdlog::thread_pool(),
-			                                                                  spdlog::async_overflow_policy::block));
+				                           sinks.begin(), sinks.end(),
+				                           spdlog::thread_pool(),
+				                           spdlog::async_overflow_policy::block));
 		}
 		else {
 			spdlog::set_default_logger(std::make_shared<spdlog::logger>(basename, sinks.begin(),
-			                                                            sinks.end()));
+				                           sinks.end()));
 		}
 
 		auto formatter = std::make_unique<spdlog::pattern_formatter>();
@@ -172,6 +175,40 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 		spdlog::flush_every(std::chrono::seconds(5));
 		spdlog::flush_on(spdlog::level::info);
 		spdlog::set_level(_logLevel);
+
+		s_backtraceDepth = backtrackDepth;
+		spdlog::enable_backtrace(backtrackDepth);
+		auto signalHandler = [](int signal) {
+#ifndef _WIN32
+			std::vector<void*> array(s_backtraceDepth);
+			size_t size;
+
+			// 获取指针数组，每一个指针对应一层栈帧
+			size = backtrace(array.data(), s_backtraceDepth);
+
+			// 获取符号列表并打印到 spdlog
+			char** symbols = backtrace_symbols(array.data(), size);
+			if (symbols == nullptr) {
+				spdlog::critical("Unable to obtain backtrace symbols.");
+			}
+			else {
+				spdlog::critical("Error: signal {}", signal);
+				spdlog::critical(" ****************** Backtrace Start ******************");
+				for (size_t i = 0; i < size; ++i) {
+					spdlog::critical("Backtrace {}: {}", i, symbols[i]);
+				}
+				free(symbols);
+				spdlog::critical(" ****************** Backtrace End ********************");
+			}
+#else
+			spdlog::critical("Fatal error: Signal {}", signal);
+			spdlog::dump_backtrace();
+#endif
+			std::exit(signal);
+		};
+		std::signal(SIGSEGV, signalHandler);
+		std::signal(SIGABRT, signalHandler);
+
 	} catch (std::exception_ptr e) {
 		assert(false);
 		return false;
@@ -232,14 +269,12 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, const int mode)
 }
 
 kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path,
-                                                     std::size_t max_size,
-                                                     std::size_t max_storage_days,
-                                                     bool rotate_on_open,
-                                                     const spdlog::file_event_handlers&
-                                                     event_handlers) : _log_path(log_path),
-                                                                       _max_size(max_size),
-                                                                       _max_storage_days(max_storage_days),
-                                                                       _file_helper{event_handlers}
+                                                            std::size_t max_size,
+                                                            std::size_t max_storage_days,
+                                                            bool rotate_on_open,
+                                                            const spdlog::file_event_handlers&
+                                                            event_handlers) : _log_path(log_path),
+                                                                              _max_size(max_size), _max_storage_days(max_storage_days), _file_helper{ event_handlers }
 {
 	if (max_size == 0) {
 		spdlog::throw_spdlog_ex("rotating sink constructor: max_size arg cannot be zero");
@@ -254,7 +289,7 @@ kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path
 
 	spdlog::filename_t basename, ext;
 	std::tie(basename, ext) =
-			spdlog::details::file_helper::split_by_extension(_log_filename.string());
+		spdlog::details::file_helper::split_by_extension(_log_filename.string());
 
 	_log_basename = basename;
 
@@ -276,11 +311,11 @@ spdlog::filename_t kkem::CustomRotatingFileSink::calc_filename()
 	std::tm tm = *std::localtime(&time);
 
 	return _log_parent_path.empty()
-		       ? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log", tm,
-		                                 _log_basename.string(), tm)
-		       : spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log",
-		                                 _log_parent_path.string(), tm, _log_basename.string(),
-		                                 tm);
+		? spdlog::fmt_lib::format("{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log", tm,
+			_log_basename.string(), tm)
+		: spdlog::fmt_lib::format("{}/{:%Y-%m-%d}/{}_{:%Y-%m-%d_%H-%M-%S}.log",
+			_log_parent_path.string(), tm, _log_basename.string(),
+			tm);
 	/// logs/yyyy-mm-dd/basename_yyyy-mm-dd_h-m-s.log
 }
 
@@ -338,14 +373,14 @@ void kkem::CustomRotatingFileSink::cleanup_file_()
 				const int mon = std::stoi(folder_name.substr(5, 7));
 				const int day = std::stoi(folder_name.substr(8, 10));
 
-				std::tm date1_tm{0, 0, 0, day, mon - 1, year - 1900};
+				std::tm date1_tm{ 0, 0, 0, day, mon - 1, year - 1900 };
 				const std::time_t date_tt = std::mktime(&date1_tm);
 
 				const std::chrono::system_clock::time_point time =
-						std::chrono::system_clock::from_time_t(date_tt);
+					std::chrono::system_clock::from_time_t(date_tt);
 
 				const std::chrono::system_clock::time_point now =
-						std::chrono::system_clock::now();
+					std::chrono::system_clock::now();
 
 				const std::chrono::duration<double> duration = now - time;
 
@@ -355,7 +390,7 @@ void kkem::CustomRotatingFileSink::cleanup_file_()
 				if (days > _max_storage_days) {
 					std::filesystem::remove_all(p);
 					std::cout << "Clean up log files older than" << _max_storage_days << " days"
-							<< std::endl;
+						<< std::endl;
 				}
 			}
 		}
@@ -371,11 +406,11 @@ bool kkem::CustomRotatingFileSink::is_daily_rotate_tp_()
 	if (tm.tm_mday != _last_rotate_day) return true;
 
 	return false;
+
 }
 
 void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log_msg,
-                                            const std::tm&, spdlog::memory_buf_t& dest)
-{
+                                            const std::tm&, spdlog::memory_buf_t& dest) {
 	switch (_log_msg.level) {
 #undef DEBUG
 #undef ERROR
