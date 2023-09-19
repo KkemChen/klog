@@ -37,7 +37,7 @@
 
 namespace kkem
 {
-	constexpr const char* LOG_PATH          = "logs/test.log"; //默认日志存储路径
+	constexpr const char* LOG_PATH          = "logs/LinuxProject1.log"; //默认日志存储路径
 	constexpr uint32_t SINGLE_FILE_MAX_SIZE = 20 * 1024 * 1024;//单个日志文件最大大小(20M)
 	constexpr uint32_t MAX_STORAGE_DAYS     = 5;               //日志保存时间(天)
 
@@ -151,10 +151,9 @@ namespace kkem
 
 		/**
 		 * \brief 初始化日志
-		 * \param logPath 日志路径：默认"logs/test.log"
+		 * \param logPath 日志路径：默认"logs/LinuxProject1.log"
 		 * \param mode STDOUT:控制台 FILE:文件 ASYNC:异步模式
 		 * \param threadCount 异步模式线程池线程数量
-		 * \param backtrackDepth backtrack输出调用栈层数
 		 * \param logBufferSize 异步模式下日志缓冲区大小
 		 * \return true:success  false:failed
 		 */

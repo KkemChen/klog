@@ -1,8 +1,10 @@
 #include "Log.h"
 #include <csignal>
+#ifndef _WIN32
 #include <execinfo.h>
 #include <unistd.h>
 #include <cstdlib>
+#endif
 thread_local std::stringstream kkem::Logger::_ss;
 static uint32_t s_backtraceDepth = 0;
 #ifdef _WIN32
@@ -115,7 +117,7 @@ void kkem::Logger::set_level_(const std::string& logger, LogLevel lvl)
 
 /***************/
 bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
-                        const uint32_t threadCount, const uint32_t backtrackDepth,const uint32_t logBufferSize)
+                        const uint32_t threadCount, const uint32_t backtrackDepth, const uint32_t logBufferSize)
 {
 	if (_isInited) return true;
 	try {
@@ -208,7 +210,6 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 		};
 		std::signal(SIGSEGV, signalHandler);
 		std::signal(SIGABRT, signalHandler);
-
 	} catch (std::exception_ptr e) {
 		assert(false);
 		return false;
