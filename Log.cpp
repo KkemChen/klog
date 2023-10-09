@@ -295,8 +295,13 @@ kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path
 	_log_basename = basename;
 
 	_file_helper.open(calc_filename());
-	_current_size = _file_helper.size();// expensive. called only once
+    _current_size = _file_helper.size(); // expensive. called only once
+        
+	auto now = std::chrono::system_clock::now();
+	std::time_t time = std::chrono::system_clock::to_time_t(now);
+	std::tm tm = *std::localtime(&time);
 
+	_last_rotate_day = tm.tm_mday;
 	cleanup_file_();
 
 	if (rotate_on_open && _current_size > 0) {
