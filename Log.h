@@ -1,16 +1,16 @@
 #pragma once
 
-// 检查 C++ 标准版本是否为 C++17 或更高版本
-#if __cplusplus < 201703L || _MSVC_LANG < 201703L
-	#if defined(_WIN32) && _MSC_VER >= 1910
-	#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#if defined(_WIN32) && _MSC_VER >= 1910 && __cplusplus < 201703L
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #endif
+
+#if __cplusplus < 201703L || (defined(__GNUC__) && __GNUC__ < 8)
 #include <experimental/filesystem>
-	namespace std{
-		namespace filesystem = experimental::filesystem;
-	}
+namespace std {
+	namespace filesystem = experimental::filesystem;
+}
 #else
-	#include <filesystem>
+#include <filesystem>
 #endif
 
 #include <cstdarg>
