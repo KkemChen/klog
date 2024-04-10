@@ -6,26 +6,33 @@ add_rules("mode.debug", "mode.release")     -- xmake f --verbose -m debug/releas
 --set_symbols("debug")                      -- 默认构建模式 debug release
 set_optimize("none")                      -- 优化级别  
 set_languages("cxx14")                    -- 语言标准 
-add_cxxflags("-ggdb","-g","-fPIC","-Wall","-Wextra",
-    "-Wno-unused-function","-Wno-unused-parameter","-Wno-unused-variable",
-    "-Wno-error=extra","-Wno-error=missing-field-initializers","-Wno-error=type-limits")
+if is_plat("windows") then
+    add_cxxflags("/Zc:__cplusplus","/utf-8")
+end
 
-add_includedirs("3rdpart/spdlog/include")
+if is_plat("macosx","linux") then
+    add_cxxflags("-ggdb","-g","-fPIC","-Wall","-Wextra",
+                "-Wno-unused-function","-Wno-unused-parameter","-Wno-unused-variable",
+                "-Wno-error=extra","-Wno-error=missing-field-initializers","-Wno-error=type-limits")
+    add_syslinks("pthread","stdc++fs")
+end
+
+add_includedirs("3rdpart/Spdlog/include")
 
 set_targetdir("build")
 
 target("demo")
     set_kind("binary")
     add_deps("spdlog")
-    add_files("src/**.cpp")
+    add_files("src/*.cpp")
     --add_linkdirs("lib")
-    add_links("spdlog","pthread","stdc++fs")
+    add_links("spdlog")
 
 
 target("spdlog")
-    set_kind("shared")
+    set_kind("static")
     set_targetdir("build")
-    add_files("3rdpart/spdlog/src/*.cpp")
+    add_files("3rdpart/Spdlog/src/*.cpp")
     add_defines("SPDLOG_COMPILED_LIB")
     
 
