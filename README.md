@@ -1,8 +1,8 @@
 # klog
 基于[spdlog ](https://github.com/gabime/spdlog)封装，支持fmt\printf\流式输入
 
-> main分支为header—only，仅需包含Log.hpp既可使用  
-> lib分支为单独编译为动态库
+> 代码使用xmake进行编译（仅作为示例），如需集成到其他项目，只需自行链接spdlog库即可。
+
 
 ### xmake构建
 
@@ -26,7 +26,7 @@
 		
 		//添加额外日志
 		kkem::Logger::Get().add_ExLog("logs/EX_stream.log", kkem::STDOUT | kkem::FILEOUT | kkem::ASYNC);
-		kkem::Logger::Get().set_level_("EX_stream", kkem::LOG_LEVEL::OFF);
+		kkem::Logger::Get().set_level("EX_stream", kkem::LOG_LEVEL::OFF);
 		
 		LOGTRACE() << "test" << 6666;	///流式输入
 		logtrace("TEST:%p,%d,%x",&ret,ret+2,&ret+1);	///printf式输入

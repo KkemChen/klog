@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
 
     kkem::Logger::Get().add_ExLog("logs/EX_stream.log", kkem::STDOUT | kkem::FILEOUT | kkem::ASYNC);
-    kkem::Logger::Get().set_level("EX_stream", kkem::LogLevel::Off);
+    kkem::Logger::Get().set_level("EX_stream", kkem::LogLevel::Info);
 
 
     LOGTRACE() << "test" << 6666;

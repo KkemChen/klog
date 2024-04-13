@@ -5,7 +5,7 @@ add_rules("mode.debug", "mode.release")     -- xmake f --verbose -m debug/releas
 -- 添加C++编译选项
 --set_symbols("debug")                      -- 默认构建模式 debug release
 set_optimize("none")                      -- 优化级别  
-set_languages("cxx14")                    -- 语言标准 
+set_languages("cxx20")                    -- 语言标准 
 if is_plat("windows") then
     add_cxxflags("/Zc:__cplusplus","/utf-8")
 end
