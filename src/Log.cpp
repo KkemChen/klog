@@ -222,12 +222,41 @@ bool kkem::Logger::init(const std::string& logPath, const uint32_t mode,
 			}
 			else {
 				spdlog::critical("Error: signal {}", signal);
-				spdlog::critical(" ****************** Backtrace Start ******************");
+				spdlog::critical("****************** Backtrace Start ******************");
 				for (size_t i = 0; i < size; ++i) {
-					spdlog::critical("Backtrace {}: {}", i, symbols[i]);
+					std::stringstream ss;
+					ss << "[" << i << "]: " << symbols[i] << "\n";
+					// 解析可执行文件路径和偏移地址
+					char* begin_path = symbols[i];
+					char* end_path = strchr(symbols[i], '(');
+					char* begin_offset = strchr(symbols[i], '+');
+					char* end_offset = strchr(symbols[i], ')');
+
+					if (begin_path && end_path && begin_offset && end_offset && begin_offset < end_offset) {
+						*end_path = '\0';    // 终止可执行文件路径字符串
+						*end_offset = '\0';  // 终止偏移地址字符串
+
+						char syscom[256];
+						sprintf(syscom, "addr2line -e %s -f -C -i %s", begin_path, begin_offset + 1);
+						std::array<char, 1024> buffer;
+						std::string result;
+						std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(syscom, "r"), pclose);
+						if (!pipe) {
+							spdlog::critical("Failed to run addr2line command");
+							continue;
+						}
+						while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+							result += buffer.data();
+						}
+						ss << result;
+						spdlog::critical("{}",ss.str());
+					}
+					else {
+						spdlog::critical("Failed to parse executable path or offset for backtrace {}", i);
+					}
 				}
 				free(symbols);
-				spdlog::critical(" ****************** Backtrace End ********************");
+				spdlog::critical("****************** Backtrace End ********************");
 			}
 #else
 			spdlog::critical("Fatal error: Signal {}", signal);
@@ -342,7 +371,7 @@ kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path
 
 void kkem::CustomRotatingFileSink::add_on_output(const std::function<void(const std::string& msg, const int& level)>& cb) {
 #ifdef LOG_ADD_OUTPUT_MUTEX
-			std::lock_guard<std::recursive_mutex> lock(_on_output_mx);
+	std::lock_guard<std::recursive_mutex> lock(_on_output_mx);
 #endif
 	_on_outputs.push_back(cb);
 }
@@ -386,11 +415,11 @@ void kkem::CustomRotatingFileSink::sink_it_(const spdlog::details::log_msg& msg)
 #ifdef LOG_ADD_OUTPUT_MUTEX
 		std::lock_guard<std::recursive_mutex> lock(_on_output_mx);
 #endif
-		for (auto& on_output: _on_outputs) {
-			on_output(fmt::to_string(formatted),msg.level);
+		for (auto& on_output : _on_outputs) {
+			on_output(fmt::to_string(formatted), msg.level);
 		}
 	}
-	
+
 	_file_helper.write(formatted);
 	_current_size = new_size;
 }
@@ -472,11 +501,11 @@ void kkem::CustomLevelFormatterFlag::format(const spdlog::details::log_msg& _log
 					break; }
 
 		xx(spdlog::level::trace, TRACE)
-		xx(spdlog::level::debug, DEBUG)
-		xx(spdlog::level::info, INFO)
-		xx(spdlog::level::warn, WARN)
-		xx(spdlog::level::err, ERROR)
-		xx(spdlog::level::critical, FATAL)
+			xx(spdlog::level::debug, DEBUG)
+			xx(spdlog::level::info, INFO)
+			xx(spdlog::level::warn, WARN)
+			xx(spdlog::level::err, ERROR)
+			xx(spdlog::level::critical, FATAL)
 #undef xx
 	default: break;
 	}
