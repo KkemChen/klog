@@ -311,13 +311,11 @@ bool kkem::Logger::add_ExLog(const std::string& logPath, const int mode) {
 	return true;
 }
 
-kkem::CustomRotatingFileSink::CustomRotatingFileSink(spdlog::filename_t log_path,
-													 std::size_t max_size,
-													 std::size_t max_storage_days,
-													 bool rotate_on_open,
-													 const spdlog::file_event_handlers&
-														 event_handlers) : _log_path(log_path),
-																		   _max_size(max_size), _max_storage_days(max_storage_days), _file_helper{event_handlers} {
+kkem::CustomRotatingFileSink::CustomRotatingFileSink(
+	spdlog::filename_t log_path, std::size_t max_size, std::size_t max_storage_days,
+	bool rotate_on_open, const spdlog::file_event_handlers& event_handlers)
+	: _max_size(max_size), _max_storage_days(max_storage_days), _file_helper{event_handlers},
+	  _log_path(log_path) {
 	if (max_size == 0) {
 		spdlog::throw_spdlog_ex("rotating sink constructor: max_size arg cannot be zero");
 	}
@@ -420,33 +418,43 @@ void kkem::CustomRotatingFileSink::rotate_() {
 
 void kkem::CustomRotatingFileSink::cleanup_file_() {
 	const std::regex folder_regex(R"(\d{4}-\d{2}-\d{2})");
-	//const std::chrono::hours max_age();
+	auto now = std::chrono::system_clock::now();
 
 	for (auto& p : std::filesystem::directory_iterator(_log_parent_path)) {
 		if (std::filesystem::is_directory(p)) {
 			const std::string folder_name = p.path().filename().string();
 			if (std::regex_match(folder_name, folder_regex)) {
-				const int year = std::stoi(folder_name.substr(0, 4));
-				const int mon = std::stoi(folder_name.substr(5, 7));
-				const int day = std::stoi(folder_name.substr(8, 10));
+				try {
 
-				std::tm date1_tm{0, 0, 0, day, mon - 1, year - 1900};
-				const std::time_t date_tt = std::mktime(&date1_tm);
+					const int year = std::stoi(folder_name.substr(0, 4));
+					const int mon = std::stoi(folder_name.substr(5, 7));
+					const int day = std::stoi(folder_name.substr(8, 10));
 
-				const std::chrono::system_clock::time_point time =
-					std::chrono::system_clock::from_time_t(date_tt);
+					std::tm date1_tm = {};
+					date1_tm.tm_year = year - 1900;
+					date1_tm.tm_mon = mon - 1;
+					date1_tm.tm_mday = day;
+					const std::time_t date_tt = std::mktime(&date1_tm);
+					if (date_tt == -1) {
+						std::cerr << "Failed to parse date: " << folder_name << std::endl;
+						continue;
+					}
 
-				const std::chrono::system_clock::time_point now =
-					std::chrono::system_clock::now();
+					const std::chrono::system_clock::time_point time =
+						std::chrono::system_clock::from_time_t(date_tt);
 
-				const std::chrono::duration<double> duration = now - time;
+					const std::chrono::duration<double> duration = now - time;
 
-				const double days = duration.count() / (24 * 60 * 60);
-				// 将时间差转换为天数
+					const double days = duration.count() / (24 * 60 * 60);
+					// 将时间差转换为天数
 
-				if (days > _max_storage_days) {
-					std::filesystem::remove_all(p);
-					std::cout << "Clean up log files older than " << _max_storage_days << " days"
+					if (days > _max_storage_days) {
+						std::filesystem::remove_all(p);
+						std::cout << "Clean up log files older than " << _max_storage_days
+								  << " days" << std::endl;
+					}
+				} catch (const std::exception& e) {
+					std::cerr << "Error processing folder '" << folder_name << "': " << e.what()
 							  << std::endl;
 				}
 			}

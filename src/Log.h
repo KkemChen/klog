@@ -247,7 +247,11 @@ public:
 template<typename... Args>
 inline void Logger::log(const spdlog::source_loc& loc, LogLevel lvl, const char* fmt,
 						const Args&... args) {
+#if __cplusplus >= 202002L
+	spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt::runtime(fmt), args...);
+#else
 	spdlog::log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
+#endif
 }
 
 template<typename... Args>
@@ -261,7 +265,12 @@ inline void Logger::log_(const std::string& logger, const spdlog::source_loc& lo
 						 const char* fmt, const Args&... args) {
 	auto it = _map_exLog.find(logger);
 	if (it != _map_exLog.end()) {
+#if __cplusplus >= 202002L
+		it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt::runtime(fmt),
+						args...);
+#else
 		it->second->log(loc, static_cast<spdlog::level::level_enum>(lvl), fmt, args...);
+#endif
 	} else {
 		log(loc, lvl, fmt, args...);
 	}
